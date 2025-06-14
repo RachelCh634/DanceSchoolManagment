@@ -69,7 +69,8 @@
             "phone": "025786934",
             "group": "היפ הופ",
             "payment_status": "חוב",
-            "join_date": "2025/05/28"
+            "join_date": "2025/05/28",
+            "payments": []
         },
         {
             "id": "214901152",

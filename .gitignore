@@ -3,4 +3,7 @@ __pycache__
 .vscode
 .idea
 .venv
-
+data/
+attendances/
+/data
+/attendances
