@@ -117,7 +117,7 @@ class PaymentPage:
                     ft.Colors.ORANGE_600,
                 ),
                 self.create_stats_card(
-                    "העברות בנקאיות", 
+                    "תשלומים אחרים", 
                     stats["transfer_payments"], 
                     ft.Icons.ACCOUNT_BALANCE, 
                     ft.Colors.PURPLE_600,
@@ -327,7 +327,7 @@ class PaymentPage:
     def go_home(self, e):
         """Navigate back to home page"""
         if self.navigation_handler:
-            self.navigation_handler(None, 0)  # Navigate to dashboard (index 0)
+            self.navigation_handler(None, 0)  
 
     def get_view(self):
         """Get the modern main view of the payment page"""

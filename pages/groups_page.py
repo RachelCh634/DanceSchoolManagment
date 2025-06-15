@@ -1,7 +1,7 @@
 import json
 import flet as ft
-from students_page import StudentsPage
-from add_group_page import AddGroupPage
+from pages.students_page import StudentsPage
+from pages.add_group_page import AddGroupPage
 
 class GroupsPage:
     def __init__(self, page, navigation_callback):
@@ -9,21 +9,18 @@ class GroupsPage:
         self.navigation_callback = navigation_callback
         self.add_group_page = None
         
-        # מיכל לכפתורי הקבוצות
         self.groups_container = ft.Column(
             alignment=ft.MainAxisAlignment.START,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=20
         )
         
-        # אזור גלילה לקבוצות
         self.scroll_area = ft.Container(
             content=self.groups_container,
             expand=True,
             padding=ft.padding.symmetric(horizontal=20)
         )
         
-        # לייאאוט ראשי
         self.main_layout = ft.Column(
             controls=[
                 self.create_header(),
@@ -160,7 +157,6 @@ class GroupsPage:
         return self.main_layout
 
     def build_group_buttons(self):
-        # ניקוי הלייאאוט הקיים של הקבוצות
         self.groups_container.controls.clear()
 
         try:
@@ -194,7 +190,6 @@ class GroupsPage:
             return
 
         if not groups:
-            # Empty state
             empty_state = ft.Container(
                 content=ft.Column([
                     ft.Icon(ft.Icons.GROUP_OFF, size=64, color="#cbd5e0"),
@@ -229,8 +224,7 @@ class GroupsPage:
             )
             self.groups_container.controls.append(empty_state)
         else:
-            # Create grid layout for groups
-            max_cols = 2  # שתי עמודות
+            max_cols = 2  
             rows = []
             current_row = []
             
@@ -239,7 +233,6 @@ class GroupsPage:
                 current_row.append(ft.Container(content=group_card, expand=True))
                 
                 if len(current_row) >= max_cols or i == len(groups) - 1:
-                    # Fill remaining slots with empty containers for alignment
                     while len(current_row) < max_cols:
                         current_row.append(ft.Container(expand=True))
                     
@@ -260,7 +253,7 @@ class GroupsPage:
         self.navigation_callback(students_page)
 
     def go_home(self):
-        self.navigation_callback(None, 0)  # חזרה לעמוד הראשי
+        self.navigation_callback(None, 0) 
 
     def add_group_page_func(self, e=None):
         self.add_group_page = AddGroupPage(self.page, self.navigation_callback, self)

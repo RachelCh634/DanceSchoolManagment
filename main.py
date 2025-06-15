@@ -3,12 +3,13 @@ import os
 import asyncio
 from typing import Optional
 import math
-from attendance_page import AttendancePage
-from groups_page import GroupsPage  
-from students_list import StudentsListPage
-from payment_page import PaymentPage
-from group_attendance_page import GroupAttendancePage
-from data_utils import get_all_dashboard_data
+from pages.choose_group_attendance_page import AttendancePage
+from pages.groups_page import GroupsPage  
+from pages.students_list import StudentsListPage
+from pages.students_page import StudentsPage
+from pages.payment_page import PaymentPage
+from pages.group_attendance_page import GroupAttendancePage
+from utils.dashboard_data import get_all_dashboard_data
 
 def format_currency(amount):
     return f"₪{amount:,}"

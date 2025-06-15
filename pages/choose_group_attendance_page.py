@@ -1,6 +1,7 @@
 import json
 import flet as ft
 from typing import List, Dict, Any, Optional
+from pages.group_attendance_page import GroupAttendancePage
 
 def load_groups():
     """Load groups from JSON file"""
@@ -82,7 +83,6 @@ class AttendancePage:
 
     def show_group_attendance(self, group):
         """Show attendance table page for selected group"""
-        from group_attendance_page import GroupAttendancePage
         attendance_page = GroupAttendancePage(self.page, self.navigation_handler, group)
         self.navigation_handler(attendance_page, None)
 
@@ -321,9 +321,10 @@ class AttendancePage:
     def create_navigation_card(self):
         """Create the navigation card with back button"""
         back_button = ft.ElevatedButton(
-            text="🏠 חזרה לעמוד הראשי",
+            text="חזרה לעמוד הראשי",
             on_click=self.go_home,
-            bgcolor=ft.Colors.RED_500,
+            icon=ft.Icons.HOME,
+            bgcolor=ft.Colors.BLUE_600,
             color=ft.Colors.WHITE,
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=10),
@@ -363,7 +364,7 @@ class AttendancePage:
         spacing=0,
         expand=True,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        scroll=ft.ScrollMode.AUTO,  # הוספת גלילה גם כאן
+        scroll=ft.ScrollMode.AUTO, 
         )
 
 
@@ -375,7 +376,7 @@ class AttendancePage:
             content=ft.Column([
                 main_content_column
             ], 
-            scroll=ft.ScrollMode.AUTO,  # הוספת גלילה
+            scroll=ft.ScrollMode.AUTO,
             expand=True,
             ),
             padding=ft.padding.all(25),
