@@ -8,13 +8,12 @@ from views.add_payment_view import AddPaymentView
 from components.modern_dialog import ModernDialog
 
 
-class StudentsPage:
-    """Main students page controller"""
-    
-    def __init__(self, page, navigation_callback, group_name):
+class StudentsPage:    
+    def __init__(self, page, navigation_callback, group_name, came_from_home=False):
         self.page = page
         self.navigation_callback = navigation_callback
         self.group_name = group_name
+        self.came_from_home = came_from_home  
         
         # Data manager
         self.data_manager = StudentsDataManager()
@@ -32,6 +31,16 @@ class StudentsPage:
         
         # Initialize with students list
         self.show_students()
+
+    def go_back(self, e=None):
+        """Navigate back - depends on where we came from"""
+        if self.came_from_home:
+            self.navigation_callback(None, 0)
+        else:
+            self.navigation_callback(None, 1)
+
+    # השאר נשאר אותו דבר...
+
 
     def get_view(self):
         """Get the main view container"""
@@ -100,10 +109,6 @@ class StudentsPage:
             )
         else:
             self.dialog.show_error("שגיאה במחיקת התלמידה")
-
-    def go_back(self, e=None):
-        """Navigate back to groups page"""
-        self.navigation_callback(None, 1)
 
     def go_to_add_student_page(self, e=None):
         """Navigate to add student page"""

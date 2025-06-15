@@ -4,6 +4,7 @@ import flet as ft
 from typing import Dict, Any
 from views.attendance_table_view import AttendanceTableView 
 import datetime
+from utils.attendance_utils import AttendanceUtils
 
 
 class AttendanceCheckBox:
@@ -18,7 +19,6 @@ class AttendanceCheckBox:
         def on_click(e):
             self.is_checked = not self.is_checked
             self.parent_page.update_attendance(self.date, self.student_id, self.is_checked)
-            # Update the checkbox appearance with animation
             e.control.content = self.get_checkbox_content()
             e.control.update()
         
@@ -67,10 +67,8 @@ class GroupAttendancePage:
         self.attendance_data = {}
         self.students = []
         
-        # UI components
         self.main_content = None
         
-        # Load data
         self.load_attendance()
         self.load_students()
 
@@ -93,6 +91,21 @@ class GroupAttendancePage:
             if os.path.exists("data/students.json"):
                 with open("data/students.json", "r", encoding="utf-8") as f:
                     students_data = json.load(f)
+                    for s in students_data.get("students", []):
+                        if s.get("group", "").strip() == self.group.get("name", "").strip():
+                            self.students.append({"id": s["id"], "name": s["name"]})
+        except Exception as e:
+            print(f"Error loading students: {e}")
+
+    def load_data(self):
+        """Load attendance and student data"""
+        self.attendance_data = AttendanceUtils.load_attendance_file(self.group.get('id', ''))
+        
+        try:
+            if os.path.exists("data/students.json"):
+                with open("data/students.json", "r", encoding="utf-8") as f:
+                    students_data = json.load(f)
+                    self.students = []
                     for s in students_data.get("students", []):
                         if s.get("group", "").strip() == self.group.get("name", "").strip():
                             self.students.append({"id": s["id"], "name": s["name"]})
@@ -182,7 +195,6 @@ class GroupAttendancePage:
         
         return ft.Container(
             content=ft.Row([
-                # Total dates card
                 ft.Container(
                     content=ft.Column([
                         ft.Container(
@@ -210,7 +222,6 @@ class GroupAttendancePage:
                 
                 ft.Container(width=16),
                 
-                # Total students card
                 ft.Container(
                     content=ft.Column([
                         ft.Container(
@@ -282,7 +293,7 @@ class GroupAttendancePage:
         )
 
     def show_add_date_dialog(self, e):
-        """Show enhanced add date dialog with fixed scrolling"""
+        """Show enhanced add date dialog with FIXED scrolling and clicking"""
         selected_date = None
         
         date_display = ft.Text(
@@ -369,49 +380,66 @@ class GroupAttendancePage:
                         student_attendance[student_id] = not student_attendance[student_id]
                         is_present = student_attendance[student_id]
                         
+                        print(f"Clicked student {student_id}, new status: {is_present}")
+                        
+                        # ✅ עדכון גם האייקון וגם הרקע וגם הצבע
                         if is_present:
-                            new_icon = ft.Icon(ft.Icons.CHECK_CIRCLE, size=20, color=ft.Colors.GREEN_600)
+                            e.control.icon = ft.Icons.CHECK_CIRCLE  # ✅ שינוי האייקון
+                            e.control.icon_color = ft.Colors.GREEN_600  # ✅ שינוי צבע האייקון
+                            e.control.bgcolor = ft.Colors.GREEN_50  # ✅ שינוי רקע
                             e.control.tooltip = "נוכח - לחץ לשינוי"
                         else:
-                            new_icon = ft.Icon(ft.Icons.CANCEL, size=20, color=ft.Colors.BLUE_600)
+                            e.control.icon = ft.Icons.CANCEL  # ✅ שינוי האייקון
+                            e.control.icon_color = ft.Colors.RED_500  # ✅ שינוי צבע האייקון
+                            e.control.bgcolor = ft.Colors.RED_50  # ✅ שינוי רקע
                             e.control.tooltip = "נעדר - לחץ לשינוי"
                         
-                        e.control.content = new_icon
-                        e.control.update()
+                        e.control.update()  # ✅ עדכון הקונטרול
                         
                     return toggle_attendance
                 
-                student_row = ft.Container(
-                    content=ft.Row([
-                        ft.Text(
-                            student["name"],
-                            size=14,
-                            color=ft.Colors.GREY_700,
-                            weight=ft.FontWeight.W_500,
-                            rtl=True,
-                        ),
-                        ft.Container(
-                            content=ft.Icon(ft.Icons.CANCEL, size=20, color=ft.Colors.BLUE_600),
-                            padding=ft.padding.all(6),
-                            width=35,
-                            height=35,
-                            alignment=ft.alignment.center,
-                            on_click=create_toggle_click(student["id"]),
-                            animate=ft.Animation(150, ft.AnimationCurve.EASE_OUT),
-                            tooltip="נעדר - לחץ לשינוי",
-                            ink=True,
-                            border_radius=20,
-                        ),
-                    ], 
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    rtl=True,
+                # ✅ שורת תלמיד עם IconButton שמתעדכן כמו שצריך
+                student_row = ft.Row([
+                    ft.Text(
+                        student["name"],
+                        size=14,
+                        color=ft.Colors.GREY_700,
+                        weight=ft.FontWeight.W_500,
+                        rtl=True,
+                        expand=True,
                     ),
-                    padding=ft.padding.symmetric(horizontal=12, vertical=6),
-                    border_radius=6,
-                    border=ft.border.all(1, ft.Colors.GREY_200),
-                    margin=ft.margin.only(bottom=4),
+                    # ✅ IconButton שמתחיל כ"נעדר" ומשתנה ל"נוכח"
+                    ft.IconButton(
+                        icon=ft.Icons.CANCEL,  # ✅ מתחיל כנעדר
+                        icon_color=ft.Colors.RED_500,  # ✅ צבע אדום לנעדר
+                        icon_size=24,
+                        tooltip="נעדר - לחץ לשינוי",
+                        on_click=create_toggle_click(student["id"]),
+                        bgcolor=ft.Colors.RED_50,  # ✅ רקע אדום בהיר
+                        width=50,
+                        height=50,
+                        style=ft.ButtonStyle(
+                            shape=ft.CircleBorder(),  # ✅ עיגול יפה
+                            animation_duration=200,  # ✅ אנימציה חלקה
+                        ),
+                    ),
+                ], 
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                rtl=True,
+                spacing=10,
                 )
-                attendance_rows.append(student_row)
+                
+                # עטיפה בקונטיינר פשוט
+                wrapped_row = ft.Container(
+                    content=student_row,
+                    padding=ft.padding.all(12),
+                    margin=ft.margin.only(bottom=8),
+                    bgcolor=ft.Colors.WHITE,
+                    border=ft.border.all(1, ft.Colors.GREY_200),
+                    border_radius=8,
+                )
+                
+                attendance_rows.append(wrapped_row)
 
         def on_confirm(e):
             try:
@@ -438,129 +466,114 @@ class GroupAttendancePage:
         def on_cancel(e):
             self.page.close(dlg)
 
-        # Create dialog content with RTL alignment
-        content_items = [
-            # Header - RTL aligned
-            ft.Container(
-                content=ft.Row([
-                    ft.Column([
-                        ft.Text("הוסף תאריך חדש", size=18, weight=ft.FontWeight.W_700, color=ft.Colors.GREY_800, rtl=True),
-                        ft.Text("בחר תאריך וסמן נוכחות", size=12, color=ft.Colors.GREY_500, rtl=True),
-                    ], spacing=4, alignment=ft.CrossAxisAlignment.END),
-                    ft.Container(width=12),
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.EVENT_OUTLINED, size=28, color=ft.Colors.BLUE_600),
-                        bgcolor=ft.Colors.BLUE_50,
-                        border_radius=14,
-                        padding=ft.padding.all(10),
-                    ),
+        # תוכן הדיאלוג - פשוט ונקי
+        dialog_content = ft.Column([
+            # כותרת
+            ft.Row([
+                ft.Column([
+                    ft.Text("הוסף תאריך חדש", size=18, weight=ft.FontWeight.W_700, color=ft.Colors.GREY_800, rtl=True),
+                    ft.Text("בחר תאריך וסמן נוכחות", size=12, color=ft.Colors.GREY_500, rtl=True),
+                ], spacing=4, alignment=ft.CrossAxisAlignment.END),
+                ft.Container(width=12),
+                ft.Container(
+                    content=ft.Icon(ft.Icons.EVENT_OUTLINED, size=28, color=ft.Colors.BLUE_600),
+                    bgcolor=ft.Colors.BLUE_50,
+                    border_radius=14,
+                    padding=ft.padding.all(10),
+                ),
+            ], alignment=ft.MainAxisAlignment.END),
+            
+            ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
+            
+            # בחירת תאריך
+            ft.Column([
+                ft.Row([
+                    ft.Text("בחירת תאריך:", size=14, weight=ft.FontWeight.W_600, color=ft.Colors.GREY_700, rtl=True),
                 ], alignment=ft.MainAxisAlignment.END),
-                margin=ft.margin.only(bottom=20),
-            ),
+                ft.Container(height=8),
+                ft.Row([date_picker_button], alignment=ft.MainAxisAlignment.END),
+                ft.Container(height=8),
+                ft.Row([date_display], alignment=ft.MainAxisAlignment.END),
+                error_message,
+            ]),
             
-            # Date picker section - RTL aligned
-            ft.Container(
-                content=ft.Column([
-                    ft.Row([
-                        ft.Text("בחירת תאריך:", size=14, weight=ft.FontWeight.W_600, color=ft.Colors.GREY_700, rtl=True),
-                    ], alignment=ft.MainAxisAlignment.END),
-                    ft.Container(height=8),
-                    ft.Row([
-                        date_picker_button,
-                    ], alignment=ft.MainAxisAlignment.END),
-                    ft.Container(height=8),
-                    ft.Row([
-                        date_display,
-                    ], alignment=ft.MainAxisAlignment.END),
-                    error_message,
-                ]),
-                margin=ft.margin.only(bottom=20),
-            ),
+            ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
             
-            # Students section header - RTL aligned
+            # כותרת תלמידים
             ft.Row([
                 ft.Text("סמן נוכחות תלמידות:", size=14, weight=ft.FontWeight.W_600, color=ft.Colors.GREY_700, rtl=True),
             ], alignment=ft.MainAxisAlignment.END),
-            ft.Container(height=12),
-        ]
-        
-        # Create scrollable students list with proper height
+            
+            ft.Container(height=8),
+            
+        ], spacing=0, tight=True)
+
+        # הוספת רשימת התלמידים אם יש
         if attendance_rows:
-            students_scroll_container = ft.Container(
-                content=ft.Column(
-                    controls=attendance_rows,
-                    spacing=0,
-                    scroll=ft.ScrollMode.AUTO,
-                ),
-                height=min(250, max(150, len(attendance_rows) * 45)),
-                bgcolor=ft.Colors.WHITE,
-                border_radius=8,
-                border=ft.border.all(1, ft.Colors.GREY_200),
+            students_list = ft.ListView(
+                controls=attendance_rows,
+                height=min(250, len(attendance_rows) * 70),
+                spacing=0,
                 padding=ft.padding.all(8),
             )
-            content_items.append(students_scroll_container)
-
-        # Create main content with proper scrolling
-        content = ft.Container(
-            content=ft.Column(
-                controls=content_items,
-                horizontal_alignment=ft.CrossAxisAlignment.END,
-                tight=True,
-                spacing=0,
-            ),
-            width=420,
-            height=min(500, 200 + (len(attendance_rows) * 45) if attendance_rows else 300),
-        )
+            
+            students_container = ft.Container(
+                content=students_list,
+                bgcolor=ft.Colors.GREY_50,
+                border_radius=12,
+                border=ft.border.all(1, ft.Colors.GREY_200),
+            )
+            
+            dialog_content.controls.append(students_container)
 
         # Clean action buttons
         actions = [
-            ft.Container(
-                content=ft.Row([
-                    ft.TextButton(
-                        "ביטול", 
-                        on_click=on_cancel,
-                        style=ft.ButtonStyle(
-                            color=ft.Colors.GREY_600,
-                            padding=ft.padding.symmetric(horizontal=16, vertical=8),
-                        )
-                    ),
-                    ft.Container(width=16),
-                    ft.ElevatedButton(
-                        "הוסף תאריך",
-                        on_click=on_confirm,
-                        bgcolor=ft.Colors.BLUE_600,
-                        color=ft.Colors.WHITE,
-                        style=ft.ButtonStyle(
-                            shape=ft.RoundedRectangleBorder(radius=8),
-                            padding=ft.padding.symmetric(horizontal=16, vertical=8),
-                            elevation=0,
-                        )
-                    ),
-                ], alignment=ft.MainAxisAlignment.CENTER),
-                margin=ft.margin.only(top=40),
-            )
+            ft.Row([
+                ft.TextButton(
+                    "ביטול", 
+                    on_click=on_cancel,
+                    style=ft.ButtonStyle(
+                        color=ft.Colors.GREY_600,
+                        padding=ft.padding.symmetric(horizontal=16, vertical=8),
+                    )
+                ),
+                ft.Container(width=16),
+                ft.ElevatedButton(
+                    "הוסף תאריך",
+                    on_click=on_confirm,
+                    bgcolor=ft.Colors.BLUE_600,
+                    color=ft.Colors.WHITE,
+                    style=ft.ButtonStyle(
+                        shape=ft.RoundedRectangleBorder(radius=8),
+                        padding=ft.padding.symmetric(horizontal=16, vertical=8),
+                        elevation=0,
+                    )
+                ),
+            ], alignment=ft.MainAxisAlignment.CENTER)
         ]
 
         dlg = ft.AlertDialog(
             modal=True,
-            content=content,
+            content=ft.Container(
+                content=dialog_content,
+                width=450,
+                height=min(600, 400 + (len(attendance_rows) * 70 if attendance_rows else 0)),
+            ),
             actions=actions,
             actions_alignment=ft.MainAxisAlignment.END,
             bgcolor=ft.Colors.WHITE,
             shape=ft.RoundedRectangleBorder(radius=16),
-            content_padding=ft.padding.all(20),
+            content_padding=ft.padding.all(24),
         )
         
         self.page.open(dlg)
 
 
-    # ✅ עדכן את create_attendance_table_card להסרת הכפילות
     def create_attendance_table_card(self):
         """Create modern attendance table using AttendanceTableView"""
         dates = list(self.attendance_data.keys())
         
         if not dates and not self.students:
-            # Modern empty state
             empty_content = ft.Container(
                 content=ft.Column([
                     ft.Icon(ft.Icons.EVENT_NOTE_OUTLINED, size=80, color=ft.Colors.GREY_300),
@@ -590,7 +603,6 @@ class GroupAttendancePage:
             )
             return self.create_modern_card(empty_content)
         
-        # ✅ יצירת הטבלה החדשה עם parent_page
         self.table_view = AttendanceTableView(
             page=self.page, 
             navigation_handler=self.navigation_handler, 
@@ -598,16 +610,15 @@ class GroupAttendancePage:
             parent_page=self
         )
         
-        # יצירת כותרת לטבלה
         table_header = ft.Column([
-            ft.Row([
-                ft.Icon(ft.Icons.TABLE_CHART, size=24, color=ft.Colors.DEEP_PURPLE_600),
+             ft.Row([
+                ft.Icon(ft.Icons.TABLE_CHART, size=24, color=ft.Colors.BLUE_GREY_800),
                 ft.Container(width=8),
                 ft.Text(
                     "טבלת נוכחות",
                     size=20,
                     weight=ft.FontWeight.BOLD,
-                    color=ft.Colors.DEEP_PURPLE_600,
+                    color=ft.Colors.BLUE_GREY_800,
                     rtl=True
                 ),
             ]),
@@ -624,47 +635,14 @@ class GroupAttendancePage:
 
         table_content = ft.Column([
             table_header,
-            self.table_view.get_table_only(),  # ✅ הטבלה עצמה
+            self.table_view.get_table_only(), 
         ], spacing=0, tight=True)
 
         return self.create_modern_card(table_content)
-    # ✅ הוסף פונקציה לרענון סטטיסטיקות בלבד
-    def refresh_stats(self):
-        """Refresh only statistics without full page reload"""
-        try:
-            # טען מחדש את הנתונים
-            self.load_attendance()
-            
-            # עדכן רק את כרטיס הסטטיסטיקות
-            if hasattr(self, 'main_content') and self.main_content:
-                # מצא את כרטיס הסטטיסטיקות ועדכן אותו
-                # זה יותר מורכב, אז בינתיים נעשה רענון מלא
-                self.refresh_view()
-                
-        except Exception as e:
-            print(f"Error refreshing stats: {e}")
-
-    def refresh_view(self):
-        """Refresh the view after data changes"""
-        try:
-            # Reload data
-            self.load_data()
-            
-            # ✅ Recreate only the table part, not the entire page
-            if self.main_content:
-                # מצא את הטבלה ועדכן אותה
-                new_content = self.create_page_content()
-                self.main_content.content = new_content
-                self.main_content.update()
-                
-        except Exception as e:
-            print(f"Error refreshing view: {e}")
-            self.show_error_snackbar("שגיאה ברענון הנתונים")
 
     def refresh_stats(self):
         """Refresh only statistics - simplified version"""
         try:
-            # בינתיים פשוט נעשה רענון מלא
             self.refresh_view()
         except Exception as e:
             print(f"Error refreshing stats: {e}")
@@ -673,44 +651,13 @@ class GroupAttendancePage:
         """Navigate back to attendance page"""
         try:
             if self.navigation_handler:
-                # Navigate back to attendance page (index 2)
                 self.navigation_handler(None, 2)
         except Exception as ex:
             print(f"Error in go_back: {ex}")
 
-    def show_success_snackbar(self, message: str):
-        """Show success snackbar"""
-        try:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(message, rtl=True, color=ft.Colors.WHITE),
-                bgcolor=ft.Colors.GREEN_500,
-            )
-            self.page.snack_bar.open = True
-            self.page.update()
-        except Exception as e:
-            print(f"Error showing success snackbar: {e}")
-
-    def show_error_snackbar(self, message: str):
-        """Show error snackbar"""
-        try:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(message, rtl=True, color=ft.Colors.WHITE),
-                bgcolor=ft.Colors.RED_500,
-            )
-            self.page.snack_bar.open = True
-            self.page.update()
-        except Exception as e:
-            print(f"Error showing error snackbar: {e}")
-
-
-    def create_page_content(self):
-        """Create the main page content - REMOVED (not needed anymore)"""
-        pass
-
     def get_view(self):
         """Get the main view with clean design and full page scroll"""
         try:
-            # ✅ מבנה פשוט וברור
             main_column = ft.Column([
                 self.create_header_card(),
                 self.create_stats_card(), 
@@ -718,11 +665,10 @@ class GroupAttendancePage:
                 self.create_attendance_table_card(),
             ], 
             spacing=24,
-            scroll=ft.ScrollMode.AUTO,  # ✅ גלילה על כל העמוד
+            scroll=ft.ScrollMode.AUTO, 
             expand=True,
             )
 
-            # ✅ Container עם padding
             return ft.Container(
                 content=main_column,
                 padding=ft.padding.all(24),
@@ -737,199 +683,88 @@ class GroupAttendancePage:
                 padding=ft.padding.all(40),
             )
 
-    def refresh_view(self):
-        """Refresh the view after data changes - SIMPLIFIED"""
+    def show_success_snackbar(self, message: str):
+        """Show success snackbar"""
         try:
-            # טען נתונים מחדש
-            self.load_data()
-            
-            # אם יש navigation_handler, פשוט נווט מחדש לעמוד
-            if self.navigation_handler:
-                # נווט לעמוד הנוכחי (attendance page)
-                self.navigation_handler(None, 2)
-            else:
-                # אחרת עדכן את העמוד
-                self.page.update()
-                    
-        except Exception as e:
-            print(f"Error refreshing view: {e}")
-            self.show_error_snackbar("שגיאה ברענון הנתונים")
-
-    # ✅ הסר את כל הפונקציות המיותרות
-    def create_page_content(self):
-        """REMOVED - not needed"""
-        pass
-
-    def refresh_stats_only(self):
-        """SIMPLIFIED - just refresh whole page"""
-        self.refresh_view()
-
-    def refresh_table_only(self):
-        """SIMPLIFIED - just refresh whole page"""
-        self.refresh_view()
-
-    def load_data(self):
-        """Load attendance and student data"""
-        # Load attendance
-        path = f"attendances/attendance_{self.group.get('id', '')}.json"
-        if os.path.exists(path):
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    self.attendance_data = json.load(f)
-            except Exception as e:
-                print(f"Error loading attendance: {e}")
-                self.attendance_data = {}
-        
-        # Load students
-        try:
-            if os.path.exists("data/students.json"):
-                with open("data/students.json", "r", encoding="utf-8") as f:
-                    students_data = json.load(f)
-                    self.students = []
-                    for s in students_data.get("students", []):
-                        if s.get("group", "").strip() == self.group.get("name", "").strip():
-                            self.students.append({"id": s["id"], "name": s["name"]})
-        except Exception as e:
-            print(f"Error loading students: {e}")
-
-    def create_attendance_table_card(self):
-        """Create modern attendance table using AttendanceTableView - SIMPLE"""
-        dates = list(self.attendance_data.keys())
-        
-        if not dates and not self.students:
-            # Modern empty state
-            empty_content = ft.Container(
-                content=ft.Column([
-                    ft.Icon(ft.Icons.EVENT_NOTE_OUTLINED, size=80, color=ft.Colors.GREY_300),
-                    ft.Container(height=16),
-                    ft.Text(
-                        "אין תאריכים או תלמידים להצגה",
-                        size=20,
-                        weight=ft.FontWeight.W_500,
-                        color=ft.Colors.GREY_600,
-                        text_align=ft.TextAlign.CENTER,
-                        rtl=True
-                    ),
-                    ft.Container(height=8),
-                    ft.Text(
-                        "הוסף תאריך חדש כדי להתחיל",
-                        size=16,
-                        color=ft.Colors.GREY_500,
-                        text_align=ft.TextAlign.CENTER,
-                        rtl=True
-                    ),
-                ], 
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=0
-                ),
-                padding=ft.padding.all(60),
-                alignment=ft.alignment.center,
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE, color=ft.Colors.WHITE, size=20),
+                    ft.Container(width=8),
+                    ft.Text(message, rtl=True, color=ft.Colors.WHITE, size=14),
+                ]),
+                bgcolor=ft.Colors.GREEN_500,
+                shape=ft.RoundedRectangleBorder(radius=12),
             )
-            return self.create_modern_card(empty_content)
-        
-        # ✅ יצירת הטבלה
-        table_view = AttendanceTableView(
-            page=self.page, 
-            navigation_handler=self.navigation_handler, 
-            group=self.group,
-            parent_page=self
-        )
-        
-        # כותרת פשוטה
-        table_header = ft.Column([
-            ft.Row([
-                ft.Icon(ft.Icons.TABLE_CHART, size=24, color=ft.Colors.DEEP_PURPLE_600),
-                ft.Container(width=8),
-                ft.Text(
-                    "טבלת נוכחות",
-                    size=20,
-                    weight=ft.FontWeight.BOLD,
-                    color=ft.Colors.DEEP_PURPLE_600,
-                    rtl=True
-                ),
-            ]),
-            ft.Container(height=8),
-            ft.Text(
-                "לחץ על התאריך כדי לערוך או למחוק אותו",
-                size=14,
-                color=ft.Colors.GREY_500,
-                rtl=True,
-                italic=True
-            ),
-            ft.Container(height=16),
-        ])
-
-        # ✅ תוכן פשוט
-        table_content = ft.Column([
-            table_header,
-            table_view.get_table_only(),
-        ], spacing=0, tight=True)
-
-        return self.create_modern_card(table_content)
-
-    def refresh_stats_only(self):
-        """Refresh only statistics card without full page reload"""
-        try:
-            # טען מחדש את הנתונים
-            self.load_attendance()
-            
-            # עדכן רק את כרטיס הסטטיסטיקות
-            if hasattr(self, 'main_content') and self.main_content:
-                # מצא את הקונטיינר של הסטטיסטיקות ועדכן אותו
-                stats_card = self.create_stats_card()
-                
-                # עדכן את התוכן הראשי
-                new_content = self.create_page_content()
-                self.main_content.content = new_content
-                self.main_content.update()
-                
+            self.page.snack_bar.open = True
+            self.page.update()
         except Exception as e:
-            print(f"Error refreshing stats only: {e}")
+            print(f"Error showing success snackbar: {e}")
 
-    def refresh_table_only(self):
-        """Refresh only the table part without jumping to top"""
+    def show_error_snackbar(self, message: str):
+        """Show error snackbar"""
         try:
-            # טען מחדש את הנתונים
-            self.load_attendance()
-            
-            # עדכן רק את הטבלה
-            if hasattr(self, 'table_view') and self.table_view:
-                self.table_view.load_data()
-                
-                # מצא את כרטיס הטבלה ועדכן אותו
-                if hasattr(self, 'main_content') and self.main_content:
-                    new_content = self.create_page_content()
-                    self.main_content.content = new_content
-                    self.main_content.update()
-                    
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.ERROR_OUTLINE, color=ft.Colors.WHITE, size=20),
+                    ft.Container(width=8),
+                    ft.Text(message, rtl=True, color=ft.Colors.WHITE, size=14),
+                ]),
+                bgcolor=ft.Colors.RED_500,
+                shape=ft.RoundedRectangleBorder(radius=12),
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
         except Exception as e:
-            print(f"Error refreshing table only: {e}")
+            print(f"Error showing error snackbar: {e}")
 
     def refresh_view(self):
-        """Refresh the view after data changes"""
+        """Refresh the view after data changes - WITHOUT navigation"""
         try:
-            # Reload data
             self.load_data()
             
-            # ✅ יצירת תוכן חדש
+            if hasattr(self, 'table_view') and self.table_view:
+                self.table_view.force_refresh_from_external()
+            
             if self.main_content:
-                new_page_content = ft.Column([
+                new_content = ft.Column([
                     self.create_header_card(),
-                    self.create_stats_card(),
+                    self.create_stats_card(), 
                     self.create_actions_card(),
                     self.create_attendance_table_card(),
                 ], 
                 spacing=24,
                 scroll=ft.ScrollMode.AUTO,
                 expand=True,
-                tight=False,
                 )
                 
-                self.main_content.content = new_page_content
+                self.main_content.content = new_content
                 self.main_content.update()
+            
+            self.page.update()
                     
         except Exception as e:
             print(f"Error refreshing view: {e}")
             self.show_error_snackbar("שגיאה ברענון הנתונים")
 
+    def refresh_table_only(self):
+        """Refresh only the table part without full page reload"""
+        try:
+            self.load_attendance()
+            
+            if hasattr(self, 'table_view') and self.table_view:
+                self.table_view.force_refresh_from_external()
+                
+        except Exception as e:
+            print(f"Error refreshing table only: {e}")
 
+    def refresh_stats_only(self):
+        """Refresh only statistics without full reload"""
+        try:
+            self.load_attendance()
+            
+            if self.main_content and hasattr(self.main_content, 'content'):
+                stats_card = self.create_stats_card()
+                self.refresh_view()
+                
+        except Exception as e:
+            print(f"Error refreshing stats only: {e}")

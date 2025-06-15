@@ -5,7 +5,7 @@
             "name": "תמר לוין",
             "phone": "0583202635",
             "group": "היפ הופ",
-            "payment_status": "חוב",
+            "payment_status": "חוב: 700₪",
             "join_date": "2025/05/20",
             "payments": [
                 {
@@ -17,6 +17,11 @@
                     "amount": "300",
                     "date": "28/05/2025",
                     "payment_method": "אשראי"
+                },
+                {
+                    "amount": "350",
+                    "date": "12/06/2025",
+                    "payment_method": "העברה"
                 }
             ]
         },
@@ -68,9 +73,15 @@
             "name": "חני קאהן",
             "phone": "025786934",
             "group": "היפ הופ",
-            "payment_status": "חוב",
+            "payment_status": "שולם",
             "join_date": "2025/05/28",
-            "payments": []
+            "payments": [
+                {
+                    "amount": "1500",
+                    "date": "15/06/2025",
+                    "payment_method": "אשראי"
+                }
+            ]
         },
         {
             "id": "214901152",

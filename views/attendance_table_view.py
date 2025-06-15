@@ -12,7 +12,6 @@ class AttendanceTableView:
         self.parent_page = parent_page  
         self.attendance_data = {}
         self.students = []
-        self.main_content = None
         self.table_container = None 
         
         # Load data
@@ -34,41 +33,26 @@ class AttendanceTableView:
             print(f"Error loading students: {e}")
 
     def save_attendance(self):
-        """Save attendance data - ✅ SILENT VERSION"""
+        """Save attendance data"""
         try:
             AttendanceUtils.save_attendance_file(self.group.get('id', ''), self.attendance_data)
         except Exception as e:
             print(f"Error saving attendance: {e}")
 
-    def update_table_instantly(self):
-        """Update the table instantly after data changes"""
-        try:
-            if self.table_container:
-                new_table = self.create_modern_data_table()
-                self.table_container.content = new_table.content
-                self.table_container.update()
-                
-                if hasattr(self, 'stats_container') and self.stats_container:
-                    new_stats = self.create_stats_section()
-                    if new_stats.content:  
-                        self.stats_container.content = new_stats.content
-                        self.stats_container.update()
-                        
-        except Exception as e:
-            print(f"Error updating table instantly: {e}")
-
-    def refresh_full_page(self):
-        """Refresh the entire page content"""
-        try:
-            self.load_data()
-            
-            self.update_table_instantly()
-            
-            if self.parent_page and hasattr(self.parent_page, 'refresh_view'):
-                self.parent_page.refresh_view()
-                
-        except Exception as e:
-            print(f"Error refreshing full page: {e}")
+    def get_table_only(self):
+        """Get only the table component - for embedding in other pages"""
+        table = self.create_modern_data_table()
+        
+        self.table_container = ft.Container(
+            content=table.content if hasattr(table, 'content') else table,
+            bgcolor=getattr(table, 'bgcolor', ft.Colors.WHITE),
+            border_radius=getattr(table, 'border_radius', 16),
+            border=getattr(table, 'border', ft.border.all(1, ft.Colors.GREY_200)),
+            padding=getattr(table, 'padding', ft.padding.all(0)),
+            shadow=getattr(table, 'shadow', None),
+        )
+        
+        return self.table_container
 
     def create_modern_data_table(self):
         """Create modern React-style table with clean design and horizontal scroll"""
@@ -89,7 +73,7 @@ class AttendanceTableView:
             ft.Column(table_rows, spacing=0),
         ], spacing=0)
         
-        scrollable_table = ft.Container(
+        return ft.Container(
             content=ft.Row([
                 table_content
             ], scroll=ft.ScrollMode.AUTO), 
@@ -103,11 +87,7 @@ class AttendanceTableView:
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
                 offset=ft.Offset(0, 4),
             ),
-            width=None,  
-            height=None,
         )
-        
-        return scrollable_table
 
     def create_table_header(self):
         """Create React-style table header with fixed widths"""
@@ -214,6 +194,7 @@ class AttendanceTableView:
             self.attendance_data[date][str(student_id)] = new_status
             self.save_attendance()
             
+            # עדכון האייקון מיידית
             if new_status:
                 new_icon = ft.Icon(ft.Icons.CHECK_CIRCLE, size=22, color=ft.Colors.GREEN_600)
                 e.control.tooltip = "נוכח - לחץ לשינוי"
@@ -224,6 +205,8 @@ class AttendanceTableView:
             e.control.content = new_icon
             e.control.update()
             
+            # עדכון הטבלה המלאה ביחד עם ההודעות
+            self.update_table_instantly()
             self.show_success_snackbar(f"נוכחות עודכנה ל{'נוכח' if new_status else 'נעדר'}")
         
         current_status = self.attendance_data.get(date, {}).get(str(student_id), False)
@@ -276,67 +259,6 @@ class AttendanceTableView:
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
             border=ft.border.all(1, ft.Colors.GREY_200),
-        )
-
-    def create_header_section(self):
-        """Create header section with navigation and title"""
-        return ft.Container(
-            content=ft.Row([
-                ft.Container(
-                    content=ft.IconButton(
-                        ft.Icons.ARROW_BACK_IOS,
-                        on_click=self.go_back,
-                        icon_color=ft.Colors.GREY_600,
-                        icon_size=20,
-                        tooltip="חזרה לעמוד הקבוצה",
-                    ),
-                    bgcolor=ft.Colors.GREY_100,
-                    border_radius=12,
-                    padding=ft.padding.all(4),
-                ),
-                ft.Container(width=16),
-                ft.Column([
-                    ft.Text(
-                        "טבלת נוכחות מלאה",
-                        size=24,
-                        weight=ft.FontWeight.W_700,
-                        color=ft.Colors.GREY_800,
-                        rtl=True,
-                    ),
-                    ft.Text(
-                        f"קבוצת {self.group.get('name', '')}",
-                        size=14,
-                        color=ft.Colors.GREY_500,
-                        rtl=True,
-                    ),
-                ], spacing=4),
-                ft.Container(expand=True),
-                ft.Row([
-                    ft.Container(
-                        content=ft.IconButton(
-                            ft.Icons.REFRESH_OUTLINED,
-                            on_click=self.refresh_table,
-                            icon_color=ft.Colors.GREY_600,
-                            icon_size=20,
-                            tooltip="רענן נתונים",
-                        ),
-                        bgcolor=ft.Colors.GREY_100,
-                        border_radius=12,
-                        padding=ft.padding.all(4),
-                    ),
-                    ft.Container(width=8),
-                ]),
-            ]),
-            padding=ft.padding.all(24),
-            bgcolor=ft.Colors.WHITE,
-            border_radius=16,
-            border=ft.border.all(1, ft.Colors.GREY_200),
-            shadow=ft.BoxShadow(
-                spread_radius=0,
-                blur_radius=20,
-                color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
-                offset=ft.Offset(0, 4),
-            ),
         )
 
     def show_date_options(self, date: str):
@@ -393,7 +315,7 @@ class AttendanceTableView:
         self.page.open(dlg)
 
     def edit_date_dialog(self, current_date: str):
-        """Show edit date dialog - ✅ עם עדכון מיידי"""
+        """Show edit date dialog with instant table update and CLEAR ERROR MESSAGES"""
         date_input = ft.TextField(
             value=current_date,
             width=280,
@@ -407,48 +329,115 @@ class AttendanceTableView:
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
         )
 
+        # ✅ הוספת קונטיינר הודעת שגיאה ברור
+        error_message = ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.ERROR_OUTLINE, size=16, color=ft.Colors.RED_500),
+                ft.Container(width=8),
+                ft.Text("", size=12, color=ft.Colors.RED_500, rtl=True, weight=ft.FontWeight.W_500),
+            ], alignment=ft.MainAxisAlignment.CENTER),
+            visible=False,
+            bgcolor=ft.Colors.RED_50,
+            border=ft.border.all(1, ft.Colors.RED_200),
+            border_radius=8,
+            padding=ft.padding.all(12),
+            margin=ft.margin.only(top=12),
+            animate_opacity=ft.Animation(300, ft.AnimationCurve.EASE_OUT),
+        )
+
+        def show_error(message):
+            """Show error message in dialog"""
+            error_message.content.controls[2].value = message  # הטקסט הוא האלמנט השלישי
+            error_message.visible = True
+            error_message.update()
+            
+            # הדגשת שדה הקלט כשגיאה
+            date_input.border_color = ft.Colors.RED_400
+            date_input.focused_border_color = ft.Colors.RED_400
+            date_input.update()
+
+        def hide_error():
+            """Hide error message"""
+            error_message.visible = False
+            error_message.update()
+            
+            # החזרת שדה הקלט למצב רגיל
+            date_input.border_color = ft.Colors.GREY_200
+            date_input.focused_border_color = ft.Colors.BLUE_400
+            date_input.update()
+
+        def on_input_change(e):
+            """Hide error when user starts typing"""
+            if error_message.visible:
+                hide_error()
+
+        # ✅ הוספת מאזין לשינויים בשדה הקלט
+        date_input.on_change = on_input_change
+
         def on_confirm(e):
             try:
                 new_date = date_input.value.strip() if date_input.value else ""
                 
-                if not AttendanceUtils.validate_date(new_date):
-                    self.show_error_snackbar("אנא הכנס תאריך תקין!")
+                # ✅ בדיקות מפורטות עם הודעות שגיאה ברורות
+                if not new_date:
+                    show_error("אנא הכנס תאריך!")
                     return
                 
-                if new_date != current_date and new_date not in self.attendance_data:
-                    self.attendance_data[new_date] = self.attendance_data.pop(current_date)
-                    self.save_attendance()
-                    self.page.close(dlg)
-                    
-                    self.update_table_instantly()
-                    
-                    if self.parent_page and hasattr(self.parent_page, 'refresh_view'):
-                        self.parent_page.refresh_view()
-                    
-                    self.show_success_snackbar(f"התאריך עודכן ל-{new_date}")
-                elif new_date == current_date:
-                    self.page.close(dlg)
-                else:
-                    self.show_error_snackbar("התאריך הזה כבר קיים!")
-                    
+                if not AttendanceUtils.validate_date(new_date):
+                    show_error("פורמט התאריך לא תקין! השתמש בפורמט: dd/mm/yyyy")
+                    return
+                
+                if new_date != current_date and new_date in self.attendance_data:
+                    show_error("התאריך הזה כבר קיים במערכת!")
+                    return
+                
+                if new_date == current_date:
+                    show_error("התאריך זהה לתאריך הנוכחי!")
+                    return
+                
+                # אם הגענו לכאן - הכל תקין
+                # עדכון הנתונים
+                self.attendance_data[new_date] = self.attendance_data.pop(current_date)
+                self.save_attendance()
+                self.page.close(dlg)
+                
+                # עדכון מיידי של הטבלה
+                self.update_table_instantly()
+                
+                # הודעת הצלחה
+                self.show_success_snackbar(f"התאריך עודכן מ-{current_date} ל-{new_date}")
+                        
             except Exception as ex:
                 print(f"Error in edit_date: {ex}")
-                self.show_error_snackbar("שגיאה בעריכת התאריך")
+                show_error("שגיאה בעריכת התאריך - נסה שוב")
 
         def on_cancel(e):
             self.page.close(dlg)
 
+        # ✅ תוכן הדיאלוג עם הודעת השגיאה
         content = ft.Column([
+            # אייקון ראשי
             ft.Container(
                 content=ft.Icon(ft.Icons.EDIT_CALENDAR_OUTLINED, size=40, color=ft.Colors.BLUE_500),
                 bgcolor=ft.Colors.BLUE_50,
                 border_radius=20,
                 padding=ft.padding.all(16),
             ),
+            
             ft.Container(height=20),
-            ft.Text("ערוך את התאריך:", rtl=True, size=14, color=ft.Colors.GREY_700),
+            
+            # הוראות
+            ft.Text("ערוך את התאריך:", rtl=True, size=14, color=ft.Colors.GREY_700, weight=ft.FontWeight.W_500),
+            ft.Text("(פורמט: dd/mm/yyyy)", rtl=True, size=12, color=ft.Colors.GREY_500, italic=True),
+            
             ft.Container(height=12),
-            date_input
+            
+            # שדה הקלט
+            date_input,
+            
+            # ✅ הודעת השגיאה
+            error_message,
+            
         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, tight=True)
 
         actions = [
@@ -481,8 +470,9 @@ class AttendanceTableView:
         
         self.page.open(dlg)
 
+
     def delete_date_dialog(self, date: str):
-        """Show delete confirmation dialog - ✅ עם עדכון מיידי"""
+        """Show delete confirmation dialog with instant table update"""
         def confirm_delete(e):
             try:
                 if date in self.attendance_data:
@@ -490,11 +480,10 @@ class AttendanceTableView:
                     self.save_attendance()
                     self.page.close(dlg)
                     
+                    # עדכון מיידי של הטבלה
                     self.update_table_instantly()
                     
-                    if self.parent_page and hasattr(self.parent_page, 'refresh_view'):
-                        self.parent_page.refresh_view()
-                    
+                    # הודעת הצלחה
                     self.show_success_snackbar("התאריך נמחק בהצלחה!")
             except Exception as ex:
                 print(f"Error in delete_date: {ex}")
@@ -559,6 +548,81 @@ class AttendanceTableView:
         
         self.page.open(dlg)
 
+    def update_table_instantly(self):
+        """Update the table instantly after data changes - הפונקציה המרכזית לעדכון מיידי"""
+        try:
+            self.load_data()
+            if self.table_container:
+                new_table = self.create_modern_data_table()
+                
+                if hasattr(new_table, 'content'):
+                    self.table_container.content = new_table.content
+                else:
+                    self.table_container.content = new_table
+                
+                self.table_container.bgcolor = getattr(new_table, 'bgcolor', ft.Colors.WHITE)
+                self.table_container.border_radius = getattr(new_table, 'border_radius', 16)
+                self.table_container.border = getattr(new_table, 'border', ft.border.all(1, ft.Colors.GREY_200))
+                self.table_container.shadow = getattr(new_table, 'shadow', None)
+                
+                self.table_container.update()
+            
+            if self.parent_page and hasattr(self.parent_page, 'refresh_stats_only'):
+                self.parent_page.refresh_stats_only()
+            
+            try:
+                self.page.update()
+            except:
+                pass
+                    
+        except Exception as e:
+            print(f"Error updating table instantly: {e}")
+            self.show_error_snackbar("שגיאה בעדכון הטבלה")
+
+    def force_refresh_from_external(self):
+        """פונקציה מיוחדת לרענון מעמודים חיצוניים - ללא ניווט"""
+        try:
+            print("Force refresh called from external source")
+            self.load_data()
+            
+            if self.table_container:
+                new_table = self.create_modern_data_table()
+                
+                if hasattr(new_table, 'content'):
+                    self.table_container.content = new_table.content
+                else:
+                    self.table_container.content = new_table
+                
+                self.table_container.bgcolor = getattr(new_table, 'bgcolor', ft.Colors.WHITE)
+                self.table_container.border_radius = getattr(new_table, 'border_radius', 16)
+                self.table_container.border = getattr(new_table, 'border', ft.border.all(1, ft.Colors.GREY_200))
+                self.table_container.shadow = getattr(new_table, 'shadow', None)
+                
+                self.table_container.update()
+            
+            if hasattr(self.page, 'update'):
+                self.page.update()
+                
+        except Exception as e:
+            print(f"Error in force_refresh_from_external: {e}")
+
+    
+    def on_page_resume(self):
+        """פונקציה שנקראת כשחוזרים לעמוד - לשימוש בניווט"""
+        try:
+            print("Page resumed - refreshing table")
+            self.force_refresh_from_external()
+        except Exception as e:
+            print(f"Error in on_page_resume: {e}")
+    
+    def refresh_table(self):
+        """Refresh the table data and view - פונקציה נוספת לרענון כללי"""
+        try:
+            self.update_table_instantly()
+        except Exception as e:
+            print(f"Error refreshing table: {e}")
+            self.show_error_snackbar("שגיאה ברענון הטבלה")
+
     def show_success_snackbar(self, message: str):
         """Show success snackbar"""
         try:
@@ -593,98 +657,6 @@ class AttendanceTableView:
         except Exception as e:
             print(f"Error showing error snackbar: {e}")
 
-    def get_table_only(self):
-        """Get only the table component - for embedding in other pages"""
-        table = self.create_modern_data_table()
-        
-        self.table_container = ft.Container(
-            content=table.content,
-            bgcolor=table.bgcolor,
-            border_radius=table.border_radius,
-            border=table.border,
-            padding=table.padding,
-            shadow=table.shadow,
-            width=table.width,
-            height=table.height,
-        )
-        
-        return self.table_container
-    
-    def create_stats_section(self):
-        """Create statistics section with modern cards"""
-        dates = list(self.attendance_data.keys())
-        total_classes = len(dates)
-        total_students = len(self.students)
-        
-        if total_classes == 0 or total_students == 0:
-            return ft.Container()
-        
-        total_possible = total_classes * total_students
-        total_present = 0
-        
-        for date in dates:
-            for student in self.students:
-                if self.attendance_data[date].get(str(student["id"]), False):
-                    total_present += 1
-        
-        attendance_rate = (total_present / total_possible * 100) if total_possible > 0 else 0
-        
-        stats_content = ft.Row([
-            self.create_stat_card("שיעורים", str(total_classes), ft.Icons.CALENDAR_TODAY_OUTLINED, ft.Colors.BLUE_500),
-            self.create_stat_card("תלמידים", str(total_students), ft.Icons.PEOPLE_OUTLINE, ft.Colors.PURPLE_500),
-            self.create_stat_card("אחוז נוכחות", f"{attendance_rate:.1f}%", ft.Icons.ANALYTICS_OUTLINED, 
-                                ft.Colors.GREEN_500 if attendance_rate >= 80 else ft.Colors.AMBER_500 if attendance_rate >= 60 else ft.Colors.RED_500),
-            self.create_stat_card("סה\"כ נוכחויות", str(total_present), ft.Icons.CHECK_CIRCLE_OUTLINE, ft.Colors.TEAL_500),
-        ], alignment=ft.MainAxisAlignment.SPACE_EVENLY)
-        
-        self.stats_container = ft.Container(
-            content=stats_content,
-            padding=ft.padding.all(20),
-        )
-        
-        return self.stats_container
-
-    def create_stat_card(self, title: str, value: str, icon, color):
-        """Create individual stat card with modern design"""
-        return ft.Container(
-            content=ft.Column([
-                ft.Container(
-                    content=ft.Icon(icon, size=24, color=color),
-                    bgcolor=ft.Colors.with_opacity(0.1, color),
-                    border_radius=12,
-                    padding=ft.padding.all(12),
-                ),
-                ft.Container(height=12),
-                ft.Text(value, size=20, weight=ft.FontWeight.W_700, color=ft.Colors.GREY_800),
-                ft.Text(title, size=12, color=ft.Colors.GREY_500, rtl=True),
-            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-            bgcolor=ft.Colors.WHITE,
-            border=ft.border.all(1, ft.Colors.GREY_200),
-            padding=ft.padding.all(20),
-            border_radius=16,
-            width=160,
-            shadow=ft.BoxShadow(
-                spread_radius=0,
-                blur_radius=20,
-                color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
-                offset=ft.Offset(0, 4),
-            ),
-        )
-
-    def refresh_table(self):
-        """Refresh the table data and view"""
-        try:
-            self.load_data()
-            
-            if self.main_content:
-                new_content = self.create_page_content()
-                self.main_content.content = new_content
-                self.main_content.update()
-            
-        except Exception as e:
-            print(f"Error refreshing table: {e}")
-            self.show_error_snackbar("שגיאה ברענון הטבלה")
-
     def go_back(self, e):
         """Go back to group attendance page"""
         from pages.group_attendance_page import GroupAttendancePage
@@ -697,78 +669,4 @@ class AttendanceTableView:
 
     def create_gradient_background(self):
         """Create subtle gradient background"""
-        return ft
-    
-    def create_attendance_table_card(self):
-        """Create modern attendance table using AttendanceTableView"""
-        dates = list(self.attendance_data.keys())
-        
-        if not dates and not self.students:
-            empty_content = ft.Container(
-                content=ft.Column([
-                    ft.Icon(ft.Icons.EVENT_NOTE_OUTLINED, size=80, color=ft.Colors.GREY_300),
-                    ft.Container(height=16),
-                    ft.Text(
-                        "אין תאריכים או תלמידים להצגה",
-                        size=20,
-                        weight=ft.FontWeight.W_500,
-                        color=ft.Colors.GREY_600,
-                        text_align=ft.TextAlign.CENTER,
-                        rtl=True
-                    ),
-                    ft.Container(height=8),
-                    ft.Text(
-                        "הוסף תאריך חדש כדי להתחיל",
-                        size=16,
-                        color=ft.Colors.GREY_500,
-                        text_align=ft.TextAlign.CENTER,
-                        rtl=True
-                    ),
-                ], 
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=0
-                ),
-                padding=ft.padding.all(60),
-                alignment=ft.alignment.center,
-            )
-            return self.create_modern_card(empty_content)
-        
-        self.table_view = AttendanceTableView(
-            page=self.page, 
-            navigation_handler=self.navigation_handler, 
-            group=self.group,
-            parent_page=self 
-        )
-        
-        table_header = ft.Column([
-            ft.Row([
-                ft.Icon(ft.Icons.TABLE_CHART, size=24, color=ft.Colors.DEEP_PURPLE_600),
-                ft.Container(width=8),
-                ft.Text(
-                    "טבלת נוכחות",
-                    size=20,
-                    weight=ft.FontWeight.BOLD,
-                    color=ft.Colors.DEEP_PURPLE_600,
-                    rtl=True
-                ),
-            ]),
-            ft.Container(height=8),
-            ft.Text(
-                "לחץ על התאריך כדי לערוך או למחוק אותו",
-                size=14,
-                color=ft.Colors.GREY_500,
-                rtl=True,
-                italic=True
-            ),
-            ft.Container(height=16),
-        ])
-
-        table_content = ft.Column([
-            table_header,
-            ft.Container(
-                content=self.table_view.get_table_only(),
-                expand=True,
-            )
-        ], spacing=0, tight=True)
-
-        return self.create_modern_card(table_content)
+        return ft.Container()  

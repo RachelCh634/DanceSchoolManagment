@@ -222,7 +222,6 @@ class MainApp:
         )
 
     def create_home_page(self):
-        # כותרת פשוטה ונקייה
         welcome_section = ft.Container(
             content=ft.Column([
                 ft.Text(
@@ -240,7 +239,6 @@ class MainApp:
             padding=ft.padding.only(bottom=30),
         )
 
-        # כרטיסי סטטיסטיקות
         students_card = self.create_animated_card(
             content=ft.Column([
                 ft.Row([
@@ -317,7 +315,6 @@ class MainApp:
             height=100
         )
 
-        # רשת הכרטיסים
         stats_grid = ft.Row([
             ft.Container(content=students_card, expand=1),
             ft.Container(content=groups_card, expand=1),
@@ -325,89 +322,115 @@ class MainApp:
             ft.Container(content=attendance_card, expand=1),
         ], spacing=20)
 
-        # פעולות מהירות במרכז
-        def navigate_to_students(e):
-            self.navigate_to_page(4)
-            
-        def navigate_to_attendance(e):
-            self.navigate_to_page(2)
-            
-        def navigate_to_payments(e):
-            self.navigate_to_page(3)
-            
-        def navigate_to_groups(e):
-            self.navigate_to_page(1)
-
-        quick_actions = ft.Container(
-            content=ft.Column([
-                ft.Text("פעולות מהירות", size=24, weight=ft.FontWeight.BOLD, color="#1a202c"),
-                ft.Row([
-                    self.create_animated_card(
-                        content=ft.Column([
-                            ft.Container(
-                                content=ft.Icon(ft.Icons.PERSON_ADD, size=32, color="#4299e1"),
-                                bgcolor="#ebf8ff",
-                                border_radius=12,
-                                padding=ft.padding.all(12),
-                            ),
-                            ft.Text("הוספת תלמידה", size=16, weight=ft.FontWeight.W_500, 
-                                   text_align=ft.TextAlign.CENTER, color="#1a202c"),
-                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
-                        height=120,
-                        on_click=navigate_to_students,
-                    ),
-                    self.create_animated_card(
-                        content=ft.Column([
-                            ft.Container(
-                                content=ft.Icon(ft.Icons.CHECK_CIRCLE, size=32, color="#48bb78"),
-                                bgcolor="#f0fff4",
-                                border_radius=12,
-                                padding=ft.padding.all(12),
-                            ),
-                            ft.Text("סימון נוכחות", size=16, weight=ft.FontWeight.W_500, 
-                                   text_align=ft.TextAlign.CENTER, color="#1a202c"),
-                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
-                        height=120,
-                        on_click=navigate_to_attendance,
-                    ),
-                    self.create_animated_card(
-                        content=ft.Column([
-                            ft.Container(
-                                content=ft.Icon(ft.Icons.PAYMENT, size=32, color="#ed8936"),
-                                bgcolor="#fffaf0",
-                                border_radius=12,
-                                padding=ft.padding.all(12),
-                            ),
-                            ft.Text("רישום תשלום", size=16, weight=ft.FontWeight.W_500, 
-                                   text_align=ft.TextAlign.CENTER, color="#1a202c"),
-                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
-                        height=120,
-                        on_click=navigate_to_payments,
-                    ),
-                    self.create_animated_card(
-                        content=ft.Column([
-                            ft.Container(
-                                content=ft.Icon(ft.Icons.GROUP, size=32, color="#9f7aea"),
-                                bgcolor="#faf5ff",
-                                border_radius=12,
-                                padding=ft.padding.all(12),
-                            ),
-                            ft.Text("ניהול קבוצות", size=16, weight=ft.FontWeight.W_500, 
-                                   text_align=ft.TextAlign.CENTER, color="#1a202c"),
-                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
-                        height=120,
-                        on_click=navigate_to_groups,
-                    ),
-                ], spacing=20, alignment=ft.MainAxisAlignment.CENTER),
-            ], spacing=20, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=30),
-        )
+        groups_section = self.create_groups_section()
 
         return ft.Column([
             welcome_section,
             stats_grid,
-            quick_actions,
+            groups_section,
         ], spacing=40, scroll=ft.ScrollMode.AUTO)
+
+    def create_groups_section(self):
+        """Create a section displaying all groups"""
+        try:
+            from utils.students_data_manager import StudentsDataManager
+            data_manager = StudentsDataManager()
+            groups = data_manager._get_groups()
+            
+            if not groups:
+                return ft.Container(
+                    content=ft.Column([
+                        ft.Text("קבוצות", size=24, weight=ft.FontWeight.BOLD, color="#1a202c"),
+                        ft.Text("אין קבוצות רשומות במערכת", size=16, color="#718096"),
+                    ], spacing=10),
+                    padding=ft.padding.symmetric(vertical=20),
+                )
+            
+            group_cards = []
+            for i, group in enumerate(groups):
+                if isinstance(group, str):
+                    group_name = group
+                    teacher = "לא צוין"
+                    day = "לא צוין"
+                    time = "לא צוין"
+                    students_count = 0
+                    group_data = {
+                        "name": group_name, 
+                        "teacher": teacher, 
+                        "day": day, 
+                        "time": time, 
+                        "students": [],
+                        "members": [] 
+                    }
+                else:
+                    group_name = group.get('name', group.get('group_name', 'קבוצה ללא שם'))
+                    teacher = group.get('teacher', group.get('instructor', 'לא צוין'))
+                    day = group.get('day', group.get('day_of_week', 'לא צוין'))
+                    time = group.get('time', group.get('class_time', 'לא צוין'))
+                    students_count = len(group.get('students', group.get('members', [])))
+                    group_data = group
+                
+                def create_group_click_handler(group_info):
+                    def on_group_click(e):
+                        self.navigate_to_group_page(group_info)
+                    return on_group_click
+                
+                group_card = self.create_animated_card(
+                    content=ft.Column([
+                        ft.Row([
+                            ft.Container(
+                                content=ft.Icon(ft.Icons.GROUP, size=20, color="#4299e1"),
+                                bgcolor="#ebf8ff",
+                                border_radius=6,
+                                padding=ft.padding.all(6),
+                            ),
+                            ft.Column([
+                                ft.Text(group_name, size=16, weight=ft.FontWeight.BOLD, color="#1a202c"),
+                                ft.Text(f"מורה: {teacher}", size=12, color="#718096"),
+                            ], spacing=2, expand=True),
+                        ], spacing=10),
+                        ft.Divider(height=1, color="#e2e8f0"),
+                        ft.Container(
+                            content=ft.Text("לחץ לפרטים ←", size=11, color="#4299e1", weight=ft.FontWeight.W_500),
+                            margin=ft.margin.only(top=5),
+                        )
+                    ], spacing=8),
+                    height=140,
+                    on_click=create_group_click_handler(group_data)
+                )
+                group_cards.append(group_card)
+            
+            rows = []
+            for i in range(0, len(group_cards), 4):
+                row_cards = group_cards[i:i+4]
+                while len(row_cards) < 4:
+                    row_cards.append(ft.Container()) 
+                
+                row = ft.Row([
+                    ft.Container(content=card, expand=1) for card in row_cards
+                ], spacing=15)
+                rows.append(row)
+            
+            return ft.Container(
+                content=ft.Column([
+                    ft.Text("קבוצות", size=24, weight=ft.FontWeight.BOLD, color="#1a202c"),
+                    ft.Column(rows, spacing=15),
+                ], spacing=20),
+                padding=ft.padding.symmetric(vertical=20),
+            )
+            
+        except Exception as e:
+            print(f"שגיאה מפורטת בטעינת קבוצות: {e}")
+            import traceback
+            traceback.print_exc()
+            return ft.Container(
+                content=ft.Column([
+                    ft.Text("קבוצות", size=24, weight=ft.FontWeight.BOLD, color="#1a202c"),
+                    ft.Text(f"שגיאה בטעינת הקבוצות: {str(e)}", size=16, color="#e53e3e"),
+                ], spacing=10),
+                padding=ft.padding.symmetric(vertical=20),
+            )
+
 
     def refresh_home_page(self):
         """Refresh home page data"""
@@ -428,6 +451,13 @@ class MainApp:
             self.page.theme_mode = ft.ThemeMode.LIGHT
             self.content_area.bgcolor = "#f8fafc"
         
+        self.page.update()
+    
+    def navigate_to_group_page(self, group_data):
+        """Navigate to group details page with tabs"""
+        from pages.group_details_page import GroupDetailsPage
+        group_page = GroupDetailsPage(self.page, self.handle_navigation, group_data)
+        self.content_area.content = group_page.get_view()
         self.page.update()
 
 def main(page: ft.Page):

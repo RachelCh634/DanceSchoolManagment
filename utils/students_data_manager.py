@@ -142,7 +142,6 @@ class StudentsDataManager:
                     if p['amount'].replace('.', '', 1).isdigit()
                 )
                 
-                # Update payment status
                 group_name = student.get("group")
                 group = next((g for g in groups if g['name'] == group_name), None)
                 

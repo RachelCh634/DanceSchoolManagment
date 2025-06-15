@@ -16,9 +16,9 @@ class StudentsListView:
         
         # Components
         self.students_table = StudentsTable()
-        self.search_field = None  # נשמור הפניה לשדה החיפוש
-        self.stats_container = None  # נשמור הפניה לסטטיסטיקות
-        self.table_container = None  # נשמור הפניה לטבלה
+        self.search_field = None  
+        self.stats_container = None 
+        self.table_container = None  
         
         self.current_students = []
         self.filtered_students = []
@@ -30,7 +30,7 @@ class StudentsListView:
                 ft.Row([
                     ft.Icon(ft.Icons.PEOPLE, size=32, color=ft.Colors.BLUE_600),
                     ft.Text(
-                        "רשימת כל התלמידות",
+                        "תלמידות",
                         size=28,
                         weight=ft.FontWeight.BOLD,
                         color=ft.Colors.BLUE_GREY_800,
@@ -38,30 +38,21 @@ class StudentsListView:
                     )
                 ], alignment=ft.MainAxisAlignment.CENTER, spacing=12),
                 ft.Container(height=8),
-                ft.Text(
-                    "כאן תוכלי לראות את כל התלמידות במערכת ולחפש ביניהן",
-                    size=16,
-                    color=ft.Colors.BLUE_GREY_600,
-                    text_align=ft.TextAlign.CENTER,
-                    rtl=True
-                )
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             padding=ft.padding.symmetric(vertical=32),
-            bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.BLUE_600),
+            bgcolor=ft.Colors.with_opacity(0.02, ft.Colors.BLUE_600),
             border_radius=16,
-            margin=ft.margin.only(bottom=32)
+            margin=ft.margin.only(bottom=20)
         )
     
     def create_search_section(self) -> ft.Container:
         """Create search section"""
-        # יצירת שדה החיפוש עם שמירת הפניה
         self.search_field = ft.TextField(
             hint_text="חיפוש לפי שם, קבוצה, טלפון או כל פרט אחר...",
             hint_style=ft.TextStyle(color=ft.Colors.GREY_400),
             text_size=14,
             height=50,
             border_color=ft.Colors.GREY_300,
-            # focused_border_color=ft.Colors.GREY_500,
             border_width=1,
             border_radius=8,
             filled=True,
