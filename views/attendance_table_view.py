@@ -1,19 +1,3 @@
-"""
-Represents a view for displaying and managing attendance data for a specific group.
-
-This class provides a comprehensive interface for tracking student attendance, 
-including features like:
-- Loading and saving attendance data
-- Creating an interactive attendance table
-- Editing and deleting attendance records
-- Displaying attendance statistics
-
-Attributes:
-    page (ft.Page): The Flet page context for rendering UI
-    group (Dict[str, Any]): Group information for which attendance is being tracked
-    attendance_data (Dict): Dictionary storing attendance records
-    students (List[Dict]): List of students in the group
-"""
 import json
 import os
 import flet as ft
@@ -29,16 +13,15 @@ class AttendanceTableView:
         self.attendance_data = {}
         self.students = []
         self.main_content = None
+        self.table_container = None 
         
         # Load data
         self.load_data()
 
     def load_data(self):
         """Load attendance and student data"""
-        # ✅ Load attendance using utility
         self.attendance_data = AttendanceUtils.load_attendance_file(self.group.get('id', ''))
         
-        # Load students
         try:
             if os.path.exists("data/students.json"):
                 with open("data/students.json", "r", encoding="utf-8") as f:
@@ -54,9 +37,38 @@ class AttendanceTableView:
         """Save attendance data - ✅ SILENT VERSION"""
         try:
             AttendanceUtils.save_attendance_file(self.group.get('id', ''), self.attendance_data)
-            # ✅ ללא refresh - רק שמירה
         except Exception as e:
             print(f"Error saving attendance: {e}")
+
+    def update_table_instantly(self):
+        """Update the table instantly after data changes"""
+        try:
+            if self.table_container:
+                new_table = self.create_modern_data_table()
+                self.table_container.content = new_table.content
+                self.table_container.update()
+                
+                if hasattr(self, 'stats_container') and self.stats_container:
+                    new_stats = self.create_stats_section()
+                    if new_stats.content:  
+                        self.stats_container.content = new_stats.content
+                        self.stats_container.update()
+                        
+        except Exception as e:
+            print(f"Error updating table instantly: {e}")
+
+    def refresh_full_page(self):
+        """Refresh the entire page content"""
+        try:
+            self.load_data()
+            
+            self.update_table_instantly()
+            
+            if self.parent_page and hasattr(self.parent_page, 'refresh_view'):
+                self.parent_page.refresh_view()
+                
+        except Exception as e:
+            print(f"Error refreshing full page: {e}")
 
     def create_modern_data_table(self):
         """Create modern React-style table with clean design and horizontal scroll"""
@@ -65,26 +77,22 @@ class AttendanceTableView:
         if not dates or not self.students:
             return self.create_empty_table_state()
         
-        # Create table header
         header_row = self.create_table_header()
         
-        # Create table rows
         table_rows = []
         for date in sorted(dates, reverse=True):
             table_rows.append(self.create_table_row(date))
         
-        # Create the table content with horizontal scroll
         table_content = ft.Column([
             header_row,
-            ft.Container(height=1, bgcolor=ft.Colors.GREY_200),  # Header separator
+            ft.Container(height=1, bgcolor=ft.Colors.GREY_200),  
             ft.Column(table_rows, spacing=0),
         ], spacing=0)
         
-        # Wrap table in horizontal scroll container
         scrollable_table = ft.Container(
             content=ft.Row([
                 table_content
-            ], scroll=ft.ScrollMode.AUTO),  # Enable horizontal scroll
+            ], scroll=ft.ScrollMode.AUTO), 
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
             border=ft.border.all(1, ft.Colors.GREY_200),
@@ -95,9 +103,8 @@ class AttendanceTableView:
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
                 offset=ft.Offset(0, 4),
             ),
-            # Set minimum width to force horizontal scroll when needed
-            width=None,  # Let it expand naturally
-            height=None,  # Let it expand naturally
+            width=None,  
+            height=None,
         )
         
         return scrollable_table
@@ -117,12 +124,11 @@ class AttendanceTableView:
                         rtl=True
                     ),
                 ], alignment=ft.MainAxisAlignment.START),
-                width=160,  # Increased width for date column
+                width=160,  
                 padding=ft.padding.symmetric(horizontal=16, vertical=16),
             )
         ]
         
-        # Add student header cells with fixed widths
         for student in self.students:
             header_cells.append(
                 ft.Container(
@@ -133,12 +139,12 @@ class AttendanceTableView:
                         color=ft.Colors.GREY_700,
                         text_align=ft.TextAlign.CENTER,
                         rtl=True,
-                        overflow=ft.TextOverflow.ELLIPSIS,  # Handle long names
+                        overflow=ft.TextOverflow.ELLIPSIS, 
                     ),
-                    width=140,  # Fixed width for each student column
+                    width=140,  
                     padding=ft.padding.symmetric(horizontal=12, vertical=16),
                     alignment=ft.alignment.center,
-                    tooltip=student["name"],  # Show full name on hover
+                    tooltip=student["name"],  
                 )
             )
         
@@ -162,7 +168,7 @@ class AttendanceTableView:
                         weight=ft.FontWeight.W_500
                     ),
                 ], alignment=ft.MainAxisAlignment.START),
-                width=160,  # Fixed width matching header
+                width=160,  
                 padding=ft.padding.symmetric(horizontal=16, vertical=12),
                 on_click=lambda e, d=date: self.show_date_options(d),
                 ink=True,
@@ -171,13 +177,12 @@ class AttendanceTableView:
             )
         ]
         
-        # Add attendance cells with fixed widths
         for student in self.students:
             is_present = self.attendance_data.get(date, {}).get(str(student["id"]), False)
             row_cells.append(
                 ft.Container(
                     content=self.create_status_toggle(is_present, date, student["id"]),
-                    width=140,  # Fixed width matching header
+                    width=140,  
                     padding=ft.padding.symmetric(horizontal=12, vertical=12),
                     alignment=ft.alignment.center,
                 )
@@ -201,7 +206,6 @@ class AttendanceTableView:
     def create_status_toggle(self, is_present: bool, date: str, student_id: str):
         """Create clean icon-only status toggle button"""
         def toggle_attendance(e):
-            # קבלת הסטטוס הנוכחי מהנתונים
             current_status = self.attendance_data.get(date, {}).get(str(student_id), False)
             new_status = not current_status
             
@@ -210,7 +214,6 @@ class AttendanceTableView:
             self.attendance_data[date][str(student_id)] = new_status
             self.save_attendance()
             
-            # עדכון מיידי של הכפתור - יצירת אייקון חדש
             if new_status:
                 new_icon = ft.Icon(ft.Icons.CHECK_CIRCLE, size=22, color=ft.Colors.GREEN_600)
                 e.control.tooltip = "נוכח - לחץ לשינוי"
@@ -218,16 +221,13 @@ class AttendanceTableView:
                 new_icon = ft.Icon(ft.Icons.CLOSE, size=22, color=ft.Colors.RED_500)
                 e.control.tooltip = "נעדר - לחץ לשינוי"
             
-            # החלפת התוכן
             e.control.content = new_icon
             e.control.update()
             
             self.show_success_snackbar(f"נוכחות עודכנה ל{'נוכח' if new_status else 'נעדר'}")
         
-        # קבלת הסטטוס הנוכחי מהנתונים
         current_status = self.attendance_data.get(date, {}).get(str(student_id), False)
         
-        # יצירת האייקון הנכון
         if current_status:
             icon = ft.Icon(ft.Icons.CHECK_CIRCLE, size=22, color=ft.Colors.GREEN_600)
             tooltip_text = "נוכח - לחץ לשינוי"
@@ -247,7 +247,6 @@ class AttendanceTableView:
             height=40,
             alignment=ft.alignment.center,
         )
-
 
     def create_empty_table_state(self):
         """Create empty state for table"""
@@ -394,7 +393,7 @@ class AttendanceTableView:
         self.page.open(dlg)
 
     def edit_date_dialog(self, current_date: str):
-        """Show edit date dialog"""
+        """Show edit date dialog - ✅ עם עדכון מיידי"""
         date_input = ft.TextField(
             value=current_date,
             width=280,
@@ -412,27 +411,25 @@ class AttendanceTableView:
             try:
                 new_date = date_input.value.strip() if date_input.value else ""
                 
-                # ✅ Validate new date
                 if not AttendanceUtils.validate_date(new_date):
                     self.show_error_snackbar("אנא הכנס תאריך תקין!")
                     return
                 
-                if new_date != current_date:
-                    if new_date not in self.attendance_data:
-                        # Move data from old date to new date
-                        self.attendance_data[new_date] = self.attendance_data.pop(current_date)
-                        self.save_attendance()
-                        self.page.close(dlg)
-                        
-                        # ✅ Trigger parent refresh
-                        if self.parent_page and hasattr(self.parent_page, 'refresh_view'):
-                            self.parent_page.refresh_view()
-                        
-                        self.show_success_snackbar(f"התאריך עודכן ל-{new_date}")
-                    else:
-                        self.show_error_snackbar("התאריך הזה כבר קיים!")
-                else:
+                if new_date != current_date and new_date not in self.attendance_data:
+                    self.attendance_data[new_date] = self.attendance_data.pop(current_date)
+                    self.save_attendance()
                     self.page.close(dlg)
+                    
+                    self.update_table_instantly()
+                    
+                    if self.parent_page and hasattr(self.parent_page, 'refresh_view'):
+                        self.parent_page.refresh_view()
+                    
+                    self.show_success_snackbar(f"התאריך עודכן ל-{new_date}")
+                elif new_date == current_date:
+                    self.page.close(dlg)
+                else:
+                    self.show_error_snackbar("התאריך הזה כבר קיים!")
                     
             except Exception as ex:
                 print(f"Error in edit_date: {ex}")
@@ -485,7 +482,7 @@ class AttendanceTableView:
         self.page.open(dlg)
 
     def delete_date_dialog(self, date: str):
-        """Show delete confirmation dialog"""
+        """Show delete confirmation dialog - ✅ עם עדכון מיידי"""
         def confirm_delete(e):
             try:
                 if date in self.attendance_data:
@@ -493,7 +490,8 @@ class AttendanceTableView:
                     self.save_attendance()
                     self.page.close(dlg)
                     
-                    # ✅ Trigger parent refresh
+                    self.update_table_instantly()
+                    
                     if self.parent_page and hasattr(self.parent_page, 'refresh_view'):
                         self.parent_page.refresh_view()
                     
@@ -595,11 +593,22 @@ class AttendanceTableView:
         except Exception as e:
             print(f"Error showing error snackbar: {e}")
 
-    # ✅ הוסף את הפונקציה החדשה
     def get_table_only(self):
         """Get only the table component - for embedding in other pages"""
-        return self.create_modern_data_table()
-
+        table = self.create_modern_data_table()
+        
+        self.table_container = ft.Container(
+            content=table.content,
+            bgcolor=table.bgcolor,
+            border_radius=table.border_radius,
+            border=table.border,
+            padding=table.padding,
+            shadow=table.shadow,
+            width=table.width,
+            height=table.height,
+        )
+        
+        return self.table_container
     
     def create_stats_section(self):
         """Create statistics section with modern cards"""
@@ -610,7 +619,6 @@ class AttendanceTableView:
         if total_classes == 0 or total_students == 0:
             return ft.Container()
         
-        # Calculate overall attendance
         total_possible = total_classes * total_students
         total_present = 0
         
@@ -621,16 +629,20 @@ class AttendanceTableView:
         
         attendance_rate = (total_present / total_possible * 100) if total_possible > 0 else 0
         
-        return ft.Container(
-            content=ft.Row([
-                self.create_stat_card("שיעורים", str(total_classes), ft.Icons.CALENDAR_TODAY_OUTLINED, ft.Colors.BLUE_500),
-                self.create_stat_card("תלמידים", str(total_students), ft.Icons.PEOPLE_OUTLINE, ft.Colors.PURPLE_500),
-                self.create_stat_card("אחוז נוכחות", f"{attendance_rate:.1f}%", ft.Icons.ANALYTICS_OUTLINED, 
-                                    ft.Colors.GREEN_500 if attendance_rate >= 80 else ft.Colors.AMBER_500 if attendance_rate >= 60 else ft.Colors.RED_500),
-                self.create_stat_card("סה\"כ נוכחויות", str(total_present), ft.Icons.CHECK_CIRCLE_OUTLINE, ft.Colors.TEAL_500),
-            ], alignment=ft.MainAxisAlignment.SPACE_EVENLY),
+        stats_content = ft.Row([
+            self.create_stat_card("שיעורים", str(total_classes), ft.Icons.CALENDAR_TODAY_OUTLINED, ft.Colors.BLUE_500),
+            self.create_stat_card("תלמידים", str(total_students), ft.Icons.PEOPLE_OUTLINE, ft.Colors.PURPLE_500),
+            self.create_stat_card("אחוז נוכחות", f"{attendance_rate:.1f}%", ft.Icons.ANALYTICS_OUTLINED, 
+                                ft.Colors.GREEN_500 if attendance_rate >= 80 else ft.Colors.AMBER_500 if attendance_rate >= 60 else ft.Colors.RED_500),
+            self.create_stat_card("סה\"כ נוכחויות", str(total_present), ft.Icons.CHECK_CIRCLE_OUTLINE, ft.Colors.TEAL_500),
+        ], alignment=ft.MainAxisAlignment.SPACE_EVENLY)
+        
+        self.stats_container = ft.Container(
+            content=stats_content,
             padding=ft.padding.all(20),
         )
+        
+        return self.stats_container
 
     def create_stat_card(self, title: str, value: str, icon, color):
         """Create individual stat card with modern design"""
@@ -662,10 +674,8 @@ class AttendanceTableView:
     def refresh_table(self):
         """Refresh the table data and view"""
         try:
-            # Reload data
             self.load_data()
             
-            # Recreate the main content
             if self.main_content:
                 new_content = self.create_page_content()
                 self.main_content.content = new_content
@@ -694,7 +704,6 @@ class AttendanceTableView:
         dates = list(self.attendance_data.keys())
         
         if not dates and not self.students:
-            # Modern empty state
             empty_content = ft.Container(
                 content=ft.Column([
                     ft.Icon(ft.Icons.EVENT_NOTE_OUTLINED, size=80, color=ft.Colors.GREY_300),
@@ -724,15 +733,13 @@ class AttendanceTableView:
             )
             return self.create_modern_card(empty_content)
         
-        # ✅ יצירת הטבלה החדשה עם parent_page
         self.table_view = AttendanceTableView(
             page=self.page, 
             navigation_handler=self.navigation_handler, 
             group=self.group,
-            parent_page=self  # ✅ העבר את עצמך כ-parent
+            parent_page=self 
         )
         
-        # יצירת כותרת לטבלה
         table_header = ft.Column([
             ft.Row([
                 ft.Icon(ft.Icons.TABLE_CHART, size=24, color=ft.Colors.DEEP_PURPLE_600),
@@ -765,4 +772,3 @@ class AttendanceTableView:
         ], spacing=0, tight=True)
 
         return self.create_modern_card(table_content)
-
