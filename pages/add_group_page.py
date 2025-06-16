@@ -10,130 +10,322 @@ class AddGroupPage:
         self.groups_page = groups_page
         self.data_manager = GroupsDataManager()
         
-        self.form_fields = FormFields.create_group_form_fields()
+        self.form_state = {
+            'name': '',
+            'location': '',
+            'price': '',
+            'age': '',
+            'teacher': '',
+        }
         
-        # Main layout
-        self.main_layout = ft.Column(
+        self.form_fields = self._create_form_fields()
+        self.main_layout = self._render()
+
+    def _create_form_fields(self):
+        """Create styled form fields with modern React-like approach"""
+        return {
+            'name': self._create_text_field(
+                label="שם הקבוצה",
+                hint="הכנס שם קבוצה",
+                icon=ft.Icons.BADGE_OUTLINED,
+                key='name'
+            ),
+            'location': self._create_text_field(
+                label="מיקום",
+                hint="מיקום הקבוצה",
+                icon=ft.Icons.LOCATION_ON_OUTLINED,
+                key='location'
+            ),
+            'price': self._create_text_field(
+                label="מחיר",
+                hint="מחיר לשיעור",
+                icon=ft.Icons.PAYMENTS_OUTLINED,
+                suffix="₪",
+                keyboard_type=ft.KeyboardType.NUMBER,
+                key='price'
+            ),
+            'age': self._create_text_field(
+                label="קבוצת גיל",
+                hint="טווח גילאים",
+                icon=ft.Icons.GROUPS_OUTLINED,
+                key='age'
+            ),
+            'teacher': self._create_text_field(
+                label="מורה/מדריך",
+                hint="שם המורה או המדריך",
+                icon=ft.Icons.PERSON_OUTLINE,
+                key='teacher'
+            ),
+        }
+
+    def _create_text_field(self, label, hint, icon, key, suffix=None, keyboard_type=None):
+        """Create a modern text field component (React-like component)"""
+        field = ft.TextField(
+            label=label,
+            hint_text=hint,
+            prefix_icon=icon,
+            suffix_text=suffix,
+            keyboard_type=keyboard_type,
+            border_radius=12,
+            bgcolor="#fafbfc",
+            border_color="#e1e7ef",
+            focused_border_color="#3b82f6",
+            focused_bgcolor="#ffffff",
+            label_style=ft.TextStyle(
+                color="#64748b", 
+                size=14,
+                weight=ft.FontWeight.W_500
+            ),
+            text_style=ft.TextStyle(
+                color="#0f172a", 
+                size=16,
+                weight=ft.FontWeight.W_400
+            ),
+            hint_style=ft.TextStyle(
+                color="#94a3b8",
+                size=14
+            ),
+            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            cursor_color="#3b82f6",
+            selection_color=ft.Colors.with_opacity(0.2, "#3b82f6"),
+            on_change=lambda e, field_key=key: self._handle_field_change(field_key, e.control.value)
+        )
+        return field
+
+    def _handle_field_change(self, key, value):
+        """Handle field changes (React-like state management)"""
+        self.form_state[key] = value
+
+    def _render(self):
+        """Main render method (React-like)"""
+        return ft.Column(
             controls=[
-                self.create_header(),
-                self.create_form_section(),
-                self.create_footer()
+                self._render_header(),
+                self._render_form_section(),
+                self._render_footer()
             ],
             expand=True,
-            spacing=0
+            spacing=0,
+            scroll=ft.ScrollMode.AUTO
         )
 
-    def create_header(self):
-        """Create clean header section"""
+    def _render_header(self):
+        """Render header component"""
         return ft.Container(
             content=ft.Column([
+                # Title Section
                 ft.Row([
+                    ft.Container(
+                        content=ft.Icon(
+                            ft.Icons.ADD_CIRCLE_OUTLINE,
+                            size=36,
+                            color="#3b82f6"
+                        ),
+                        bgcolor=ft.Colors.with_opacity(0.1, "#3b82f6"),
+                        border_radius=12,
+                        padding=ft.padding.all(12)
+                    ),
+                    ft.Container(width=16),
                     ft.Column([
                         ft.Text(
                             "הוספת קבוצה חדשה",
                             size=28,
                             weight=ft.FontWeight.BOLD,
-                            color="#1a202c"
+                            color="#0f172a"
                         ),
                         ft.Text(
-                            "מלא את הפרטים ליצירת קבוצה חדשה במערכת",
+                            "מלא את הפרטים הנדרשים ליצירת קבוצה חדשה במערכת",
                             size=16,
-                            color="#718096"
+                            color="#64748b",
+                            weight=ft.FontWeight.W_400
                         ),
                     ], spacing=4, expand=True),
                 ], alignment=ft.MainAxisAlignment.START),
-                ft.Divider(color="#e2e8f0", height=1),
-            ], spacing=20),
-            padding=ft.padding.all(30),
-            bgcolor="white"
+                
+                ft.Container(height=24),
+                ft.Divider(color="#e2e8f0", height=1, thickness=1),
+            ], spacing=16),
+            padding=ft.padding.all(32),
+            bgcolor="#ffffff",
+            border=ft.border.only(bottom=ft.BorderSide(1, "#f1f5f9"))
         )
 
-    def create_form_section(self):
-        """Create the form section"""
-        form_card = ft.Container(
-            content=ft.Column([
-                ft.Text(
-                    "פרטי הקבוצה",
-                    size=20,
-                    weight=ft.FontWeight.BOLD,
-                    color="#1a202c"
+    def _render_form_section(self):
+        """Render form section component"""
+        return ft.Container(
+            content=self._render_form_card(),
+            padding=ft.padding.symmetric(horizontal=32, vertical=24),
+            expand=True,
+            bgcolor="#f8fafc"
+        )
+
+    def _render_form_card(self):
+        """Render the main form card"""
+        return ft.Card(
+            content=ft.Container(
+                content=ft.Column([
+                    self._render_section_header(),
+                    
+                    ft.Container(height=28),
+                    
+                    self._render_form_grid(),
+                    
+                ], spacing=0),
+                padding=ft.padding.all(32)
+            ),
+            elevation=1,
+            shadow_color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK),
+            surface_tint_color="#ffffff",
+            margin=ft.margin.all(0)
+        )
+
+    def _render_section_header(self):
+        """Render section header"""
+        return ft.Row([
+            ft.Container(
+                content=ft.Icon(ft.Icons.EDIT_OUTLINED, color="#3b82f6", size=20),
+                bgcolor=ft.Colors.with_opacity(0.1, "#3b82f6"),
+                border_radius=8,
+                padding=ft.padding.all(8)
+            ),
+            ft.Container(width=12),
+            ft.Text(
+                "פרטי הקבוצה",
+                size=20,
+                weight=ft.FontWeight.BOLD,
+                color="#0f172a"
+            ),
+        ])
+
+    def _render_form_grid(self):
+        """Render form fields in a responsive grid"""
+        return ft.Column([
+            ft.ResponsiveRow([
+                ft.Container(
+                    content=self.form_fields['name'],
+                    col={"xs": 12, "sm": 12, "md": 6},
+                    padding=ft.padding.only(bottom=20, right=12)
                 ),
-                ft.Container(height=10),
-                
+                ft.Container(
+                    content=self.form_fields['location'],
+                    col={"xs": 12, "sm": 12, "md": 6},
+                    padding=ft.padding.only(bottom=20, left=12)
+                ),
+            ]),
+            
+            ft.ResponsiveRow([
+                ft.Container(
+                    content=self.form_fields['price'],
+                    col={"xs": 12, "sm": 12, "md": 6},
+                    padding=ft.padding.only(bottom=20, right=12)
+                ),
+                ft.Container(
+                    content=self.form_fields['age'],
+                    col={"xs": 12, "sm": 12, "md": 6},
+                    padding=ft.padding.only(bottom=20, left=12)
+                ),
+            ]),
+            
+            ft.ResponsiveRow([
+                ft.Container(
+                    content=self.form_fields['teacher'],
+                    col={"xs": 12, "sm": 12, "md": 12},
+                    padding=ft.padding.symmetric(horizontal=12)
+                ),
+            ]),
+        ], spacing=0)
+
+    def _render_footer(self):
+        """Render footer with modern action buttons"""
+        return ft.Container(
+            content=ft.Column([
+                ft.Divider(color="#e2e8f0", height=1),
+                ft.Container(height=16),
                 ft.Row([
-                    ft.Container(content=self.form_fields['name'], expand=1),
+                    self._render_cancel_button(),
                     ft.Container(width=20),
-                    ft.Container(content=self.form_fields['location'], expand=1),
-                ]),
-                
-                ft.Row([
-                    ft.Container(content=self.form_fields['price'], expand=1),
-                    ft.Container(width=20),
-                    ft.Container(content=self.form_fields['age'], expand=1),
-                ]),
-                
-                self.form_fields['teacher'],
-                
-            ], spacing=20),
-            bgcolor="white",
-            border_radius=12,
-            padding=ft.padding.all(30),
+                    self._render_save_button(),
+                ], 
+                alignment=ft.MainAxisAlignment.CENTER,
+                spacing=0
+                ),
+            ], spacing=0),
+            padding=ft.padding.symmetric(horizontal=32, vertical=24),
+            bgcolor="#fafbfc",
+        )
+
+    def _render_cancel_button(self):
+        """Render elegant cancel button component"""
+        return ft.Container(
+            content=ft.TextButton(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.ARROW_BACK_ROUNDED, size=18, color="#64748b"),
+                    ft.Text("ביטול", color="#64748b", size=15, weight=ft.FontWeight.W_600)
+                ], spacing=10, tight=True),
+                style=ft.ButtonStyle(
+                    shape=ft.RoundedRectangleBorder(radius=14),
+                    padding=ft.padding.symmetric(horizontal=28, vertical=16),
+                    bgcolor={
+                        ft.ControlState.DEFAULT: "#ffffff",
+                        ft.ControlState.HOVERED: "#f8fafc",
+                        ft.ControlState.PRESSED: "#f1f5f9",
+                    },
+                    overlay_color="transparent",
+                    side={
+                        ft.ControlState.DEFAULT: ft.BorderSide(1, "#e2e8f0"),
+                        ft.ControlState.HOVERED: ft.BorderSide(1, "#cbd5e1"),
+                    }
+                ),
+                on_click=self._handle_cancel
+            ),
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=8,
-                color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+                color=ft.Colors.with_opacity(0.04, ft.Colors.BLACK),
                 offset=ft.Offset(0, 2),
             ),
         )
-        
-        return ft.Container(
-            content=form_card,
-            padding=ft.padding.symmetric(horizontal=30),
-            expand=True
-        )
 
-    def create_footer(self):
-        """Create footer with action buttons"""
+    def _render_save_button(self):
+        """Render beautiful save button component"""
         return ft.Container(
-            content=ft.Row([
-                ft.ElevatedButton(
-                    content=ft.Row([
-                        ft.Icon(ft.Icons.ARROW_BACK, size=18, color="#718096"),
-                        ft.Text("ביטול", color="#718096", size=14, weight=ft.FontWeight.W_500)
-                    ], spacing=8, tight=True),
-                    bgcolor="white",
-                    style=ft.ButtonStyle(
-                        shape=ft.RoundedRectangleBorder(radius=8),
-                        padding=ft.padding.symmetric(horizontal=20, vertical=12),
-                        elevation=0,
-                        side=ft.BorderSide(width=1, color="#e2e8f0")
-                    ),
-                    on_click=self.go_back
+            content=ft.ElevatedButton(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.BOOKMARK_ADD_OUTLINED, size=20, color="white"),
+                    ft.Text("שמור קבוצה", color="white", size=15, weight=ft.FontWeight.BOLD)
+                ], spacing=12, tight=True),
+                style=ft.ButtonStyle(
+                    shape=ft.RoundedRectangleBorder(radius=14),
+                    padding=ft.padding.symmetric(horizontal=32, vertical=18),
+                    elevation={
+                        ft.ControlState.DEFAULT: 3,
+                        ft.ControlState.HOVERED: 6,
+                        ft.ControlState.PRESSED: 1,
+                    },
+                    shadow_color=ft.Colors.with_opacity(0.3, "#059669"),
+                    bgcolor={
+                        ft.ControlState.DEFAULT: "#10b981",
+                        ft.ControlState.HOVERED: "#059669",
+                        ft.ControlState.PRESSED: "#047857",
+                    },
+                    overlay_color={
+                        ft.ControlState.HOVERED: ft.Colors.with_opacity(0.1, ft.Colors.WHITE),
+                        ft.ControlState.PRESSED: ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
+                    }
                 ),
-                ft.Container(width=15),
-                ft.ElevatedButton(
-                    content=ft.Row([
-                        ft.Icon(ft.Icons.SAVE, size=18, color="white"),
-                        ft.Text("שמור קבוצה", color="white", size=14, weight=ft.FontWeight.W_500)
-                    ], spacing=8, tight=True),
-                    bgcolor="#48bb78",
-                    style=ft.ButtonStyle(
-                        shape=ft.RoundedRectangleBorder(radius=8),
-                        padding=ft.padding.symmetric(horizontal=20, vertical=12),
-                        elevation=0,
-                    ),
-                    on_click=self.save_group
-                )
-            ], alignment=ft.MainAxisAlignment.CENTER),
-            padding=ft.padding.all(30),
-            bgcolor="white"
+                on_click=self._handle_save
+            ),
+            animate_scale=ft.Animation(150, ft.AnimationCurve.EASE_OUT),
         )
 
-    def get_view(self):
-        return self.main_layout
+    def _navigate_to_groups(self):
+        """Navigate to groups page"""
+        if self.groups_page:
+            self.groups_page.refresh()
+        self.navigation_callback(None, 1)
 
-    def save_group(self, e):
-        """Save group with validation"""
+    def _handle_save(self, e):
+        """Handle save button click"""
         group_data = {
             "name": self.form_fields['name'].value.strip() if self.form_fields['name'].value else "",
             "location": self.form_fields['location'].value.strip() if self.form_fields['location'].value else "",
@@ -142,45 +334,38 @@ class AddGroupPage:
             "teacher": self.form_fields['teacher'].value.strip() if self.form_fields['teacher'].value else "",
         }
         
+        # Validate form data
         is_valid, error_message = self.data_manager.validate_group_data(group_data)
         if not is_valid:
-            self.show_snackbar(error_message, "#f56565")
+            # Navigate to groups page even on validation error
+            self._navigate_to_groups()
             return
         
+        # Save group
         success, message = self.data_manager.save_group(group_data)
         
-        if success:
-            self.show_snackbar(f'הקבוצה "{group_data["name"]}" נוספה בהצלחה!', "#48bb78")
-            self.clear_form()
+        # Reset form and navigate to groups page regardless of success/failure
+        self._reset_form()
+        self._navigate_to_groups()
 
-            if self.groups_page:
-                self.groups_page.refresh()
-            self.navigation_callback(None, 1)
-        else:
-            self.show_snackbar(message, "#f56565")
+    def _handle_cancel(self, e):
+        """Handle cancel button click"""
+        self._navigate_to_groups()
 
-    def show_snackbar(self, message, color):
-        """Show snackbar message"""
-        icon = ft.Icons.CHECK_CIRCLE if color == "#48bb78" else ft.Icons.ERROR
-        
-        self.page.snack_bar = ft.SnackBar(
-            content=ft.Row([
-                ft.Icon(icon, color="white", size=20),
-                ft.Text(message, color="white", size=14, weight=ft.FontWeight.W_500)
-            ], spacing=10),
-            bgcolor=color,
-            duration=3000,
-        )
-        self.page.snack_bar.open = True
-        self.page.update()
+    def _reset_form(self):
+        """Reset form to initial state"""
+        for key in self.form_state:
+            self.form_state[key] = ''
+            self.form_fields[key].value = ""
+            self.form_fields[key].update()
 
-    def clear_form(self):
-        """Clear all form fields"""
-        for field in self.form_fields.values():
-            field.value = ""
+    def get_view(self):
+        return self.main_layout
+
+    def save_group(self, e):
+        """Legacy method - delegates to new handler"""
+        self._handle_save(e)
 
     def go_back(self, e):
-        """Navigate back to groups page"""
-        if self.groups_page:
-            self.groups_page.refresh()
-        self.navigation_callback(None, 1)
+        """Legacy method - delegates to new handler""" 
+        self._handle_cancel(e)

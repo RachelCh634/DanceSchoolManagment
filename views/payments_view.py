@@ -17,7 +17,6 @@ class PaymentsView:
         """Render payments view"""
         self.parent.clear_layout()
         
-        # Header
         header = self._create_header()
         self.parent.layout.controls.append(header)
         
@@ -28,7 +27,6 @@ class PaymentsView:
         else:
             self._render_payments_list(payments)
         
-        # Actions
         actions = self._create_actions()
         self.parent.layout.controls.append(actions)
         
@@ -73,7 +71,6 @@ class PaymentsView:
 
     def _render_payments_list(self, payments):
         """Render payments list"""
-        # Summary
         total_paid = sum(
             float(p['amount']) for p in payments
             if p['amount'].replace('.', '', 1).isdigit()

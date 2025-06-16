@@ -2,11 +2,11 @@
     "students": [
         {
             "id": "214901134",
-            "name": "תמר לוין",
+            "name": "תמר לוי",
             "phone": "0583202635",
             "group": "היפ הופ",
-            "payment_status": "חוב: 700₪",
-            "join_date": "2025/05/20",
+            "payment_status": "חוב: 560₪",
+            "join_date": "20/05/2025",
             "payments": [
                 {
                     "amount": "150",
@@ -22,16 +22,22 @@
                     "amount": "350",
                     "date": "12/06/2025",
                     "payment_method": "העברה"
+                },
+                {
+                    "amount": "140",
+                    "date": "16/06/2025",
+                    "payment_method": "צ'ק",
+                    "check_number": "1253652"
                 }
             ]
         },
         {
             "id": "032784738",
-            "name": "רחלי חדד",
+            "name": "רחל חדד",
             "phone": "0583202634",
             "group": "היפ הופ",
             "payment_status": "שולם",
-            "join_date": "2025/05/20",
+            "join_date": "20/05/2025",
             "payments": [
                 {
                     "amount": "1400",
@@ -105,7 +111,7 @@
         },
         {
             "id": "214526639",
-            "name": "חני בריזדמן",
+            "name": "חני בריזמן",
             "phone": "0583645296",
             "group": "היפ הופ",
             "payment_status": "שולם",
