@@ -124,6 +124,7 @@ class AddStudentView:
                 self.parent.group_dropdown,
                 self.parent.payment_status_dropdown,
                 self.parent.join_date_input,
+                self.parent.has_sister_checkbox  # ✅ הוספת הצ'קבוקס כאן
             ], spacing=16),
             bgcolor=ft.Colors.BLUE_50,
             border_radius=12,

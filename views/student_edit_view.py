@@ -20,6 +20,7 @@ class StudentEditView:
         self.group_field = None
         self.payment_field = None
         self.join_date_field = None
+        self.has_sister_checkbox= None
 
     def render(self):
         """Render the edit form with modern styling"""
@@ -139,6 +140,12 @@ class StudentEditView:
             hint="dd/mm/yyyy או dd-mm-yyyy או dd.mm.yyyy",
             suffix="📅"
         )
+        self.has_sister_checkbox = ft.Checkbox(
+            label="יש אחות נוספת בחוג",
+            value=self.student.get('has_sister', False),
+            fill_color=ft.Colors.GREEN_600
+
+        )
         
         return ft.Column([
             ft.Row([
@@ -167,6 +174,12 @@ class StudentEditView:
                 ft.Container(
                     content=self.join_date_field,
                     expand=1
+                )
+            ]),
+            ft.Row([  # ✅ הצ'קבוקס כאן
+                ft.Container(
+                    content=self.has_sister_checkbox,
+                    expand=True
                 )
             ])
         ], spacing=20)
@@ -362,7 +375,8 @@ class StudentEditView:
             "group": form_data["group"],
             "payment_status": form_data["payment_status"],
             "join_date": date_result,  
-            "payments": self.student.get('payments', [])
+            "payments": self.student.get('payments', []),
+            "has_sister": self.has_sister_checkbox.value
         }
         
         success = self.parent.data_manager.update_student(self.student['name'], new_data)
