@@ -20,7 +20,7 @@ class GroupsDataManager:
                 return json.load(f)
         except Exception:
             return {"groups": []}
-    
+
     def save_group(self, group_data):
         """Save new group to file"""
         try:
@@ -38,9 +38,12 @@ class GroupsDataManager:
                 "price": group_data["price"],
                 "age_group": group_data["age_group"],
                 "teacher": group_data["teacher"],
-                "students": []
+                "students": [],
+                "group_start_date": group_data["group_start_date"],
+                "day_of_week": group_data["day_of_week"]
+
             }
-            
+
             data["groups"].append(new_group)
             
             # Save to file

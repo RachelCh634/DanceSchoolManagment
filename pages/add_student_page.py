@@ -123,7 +123,7 @@ class AddStudentPage:
     def validate_form(self, form_data):
         """Validate form data"""
         # Check all fields are filled
-        required_fields = ["id", "name", "phone", "group", "payment_status", "join_date", "has_sister" ]
+        required_fields = ["id", "name", "phone", "group", "payment_status", "join_date"]
         if not all(form_data.get(field) for field in required_fields):
             self.dialog.show_error("יש למלא את כל השדות הנדרשים")
             return False
@@ -137,6 +137,7 @@ class AddStudentPage:
 
     def go_back(self, e=None):
         """Navigate back to students page"""
+        from pages.students_page import StudentsPage
         students_page = StudentsPage(self.page, self.navigation_callback, self.group_name)
         self.navigation_callback(students_page)
 

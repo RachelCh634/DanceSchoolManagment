@@ -24,6 +24,16 @@
       "age_group": "5-10 שנים",
       "teacher": "יעל ברכה פינס",
       "students": []
+    },
+    {
+      "id": 4,
+      "name": "ספורט",
+      "location": "ירושלים",
+      "price": "18000",
+      "age_group": "30-40",
+      "teacher": "ריקי",
+      "students": []
     }
+
   ]
 }

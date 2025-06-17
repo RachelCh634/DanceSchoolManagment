@@ -59,7 +59,7 @@ class StudentsTable:
                 ),
 
                 ft.Container(
-                    content=ft.Text("אחות בחוג", size=14, weight=ft.FontWeight.W_600, color=ft.Colors.WHITE),
+                    content=ft.Text("אחות", size=14, weight=ft.FontWeight.W_600, color=ft.Colors.WHITE),
                     expand=1,
                     **header_style
                 ),

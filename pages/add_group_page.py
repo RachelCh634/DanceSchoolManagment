@@ -9,15 +9,19 @@ class AddGroupPage:
         self.navigation_callback = navigation_callback
         self.groups_page = groups_page
         self.data_manager = GroupsDataManager()
-        
+
         self.form_state = {
             'name': '',
             'location': '',
             'price': '',
             'age': '',
             'teacher': '',
+            'start_date': '',
+            'day_of_week': '',
+            'phone':'',
+            'email':'',
         }
-        
+
         self.form_fields = self._create_form_fields()
         self.main_layout = self._render()
 
@@ -56,6 +60,33 @@ class AddGroupPage:
                 icon=ft.Icons.PERSON_OUTLINE,
                 key='teacher'
             ),
+            'start_date': self._create_text_field(
+                label="תאריך התחלה",
+                hint="dd/mm/yyyy",
+                icon=ft.Icons.DATE_RANGE_OUTLINED,
+                key='start_date'
+            ),
+            'day_of_week': self._create_text_field(
+                label="יום בשבוע",
+                hint="לדוג' ראשון, שני, שלישי...",
+                icon=ft.Icons.CALENDAR_VIEW_WEEK,
+                key='day_of_week'
+            ),
+            'phone': self._create_text_field(
+                label="טלפון",
+                hint="מספר טלפון",
+                icon=ft.Icons.PHONE,
+                keyboard_type=ft.KeyboardType.PHONE,
+                key='phone'
+            ),
+            'email': self._create_text_field(
+                label="אימייל",
+                hint="כתובת אימייל",
+                icon=ft.Icons.EMAIL_OUTLINED,
+                keyboard_type=ft.KeyboardType.EMAIL,
+                key='email'
+            ),
+
         }
 
     def _create_text_field(self, label, hint, icon, key, suffix=None, keyboard_type=None):
@@ -212,7 +243,7 @@ class AddGroupPage:
                     padding=ft.padding.only(bottom=20, left=12)
                 ),
             ]),
-            
+
             ft.ResponsiveRow([
                 ft.Container(
                     content=self.form_fields['price'],
@@ -225,12 +256,39 @@ class AddGroupPage:
                     padding=ft.padding.only(bottom=20, left=12)
                 ),
             ]),
-            
+
+            ft.ResponsiveRow([
+                ft.Container(
+                    content=self.form_fields['start_date'],
+                    col={"xs": 12, "sm": 12, "md": 6},
+                    padding=ft.padding.only(bottom=20, right=12)
+                ),
+                ft.Container(
+                    content=self.form_fields['day_of_week'],
+                    col={"xs": 12, "sm": 12, "md": 6},
+                    padding=ft.padding.only(bottom=20, left=12)
+                ),
+            ]),
+
             ft.ResponsiveRow([
                 ft.Container(
                     content=self.form_fields['teacher'],
                     col={"xs": 12, "sm": 12, "md": 12},
-                    padding=ft.padding.symmetric(horizontal=12)
+                    padding=ft.padding.only(bottom=20, right=12)
+                ),
+            ]),
+
+
+            ft.ResponsiveRow([
+                ft.Container(
+                    content=self.form_fields['phone'],
+                    col={"xs": 12, "sm": 12, "md":6},
+                    padding=ft.padding.only(bottom=20, right=12)
+                ),
+                ft.Container(
+                    content=self.form_fields['email'],
+                    col={"xs": 12, "sm": 12, "md": 6},
+                    padding=ft.padding.only(bottom=20, left=12)
                 ),
             ]),
         ], spacing=0)
@@ -332,6 +390,10 @@ class AddGroupPage:
             "price": self.form_fields['price'].value.strip() if self.form_fields['price'].value else "",
             "age_group": self.form_fields['age'].value.strip() if self.form_fields['age'].value else "",
             "teacher": self.form_fields['teacher'].value.strip() if self.form_fields['teacher'].value else "",
+            "group_start_date": self.form_fields['start_date'].value.strip() if self.form_fields['start_date'].value else "",
+            "day_of_week": self.form_fields['day_of_week'].value.strip() if self.form_fields['day_of_week'].value else "",
+            "phone": self.form_fields['phone'].value.strip() if self.form_fields['phone'].value else "",
+            "email": self.form_fields['email'].value.strip() if self.form_fields['email'].value else "",
         }
         
         # Validate form data
