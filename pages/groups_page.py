@@ -2,6 +2,7 @@ import json
 import flet as ft
 from pages.students_page import StudentsPage
 from pages.add_group_page import AddGroupPage
+from components.groups_dialogs import GroupDialogs
 
 class GroupsPage:
     def __init__(self, page, navigation_callback):
@@ -12,7 +13,9 @@ class GroupsPage:
         self.groups_container = ft.Column(
             alignment=ft.MainAxisAlignment.START,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=20
+            spacing=20,
+            scroll=ft.ScrollMode.AUTO,
+            expand=True
         )
         
         self.scroll_area = ft.Container(
@@ -97,7 +100,7 @@ class GroupsPage:
         )
 
     def create_group_card(self, group):
-        """Create a modern group card"""
+        """Create a modern group card with edit and delete options"""
         return ft.Container(
             content=ft.Column([
                 ft.Row([
@@ -109,7 +112,7 @@ class GroupsPage:
                     ),
                     ft.Column([
                         ft.Text(
-                            group["name"],
+                            group.get("name", "לא צוין"),
                             size=18,
                             weight=ft.FontWeight.BOLD,
                             color="#1a202c"
@@ -124,6 +127,16 @@ class GroupsPage:
                             size=14,
                             color="#718096"
                         ),
+                        ft.Text(
+                            f"מיקום: {group.get('location', 'לא צוין')}",
+                            size=14,
+                            color="#718096"
+                        ),
+                        ft.Text(
+                            f"יום: {group.get('day_of_week', 'לא צוין')}",
+                            size=14,
+                            color="#718096"
+                        ),
                     ], spacing=4, expand=True),
                     ft.Column([
                         ft.Text(
@@ -132,10 +145,31 @@ class GroupsPage:
                             weight=ft.FontWeight.BOLD,
                             color="#48bb78"
                         ),
-                        ft.Container(
-                            content=ft.Icon(ft.Icons.ARROW_FORWARD_IOS, size=16, color="#cbd5e0"),
-                            padding=ft.padding.all(4),
-                        )
+                        ft.Text(
+                            f"התחלה: {group.get('group_start_date', 'לא צוין')}",
+                            size=12,
+                            color="#718096"
+                        ),
+                        ft.Row([
+                            ft.IconButton(
+                                icon=ft.Icons.EDIT,
+                                icon_color="#4299e1",
+                                icon_size=18,
+                                tooltip="ערוך קבוצה",
+                                on_click=lambda e, g=group: self.edit_group(g)
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.DELETE,
+                                icon_color="#f56565",
+                                icon_size=18,
+                                tooltip="מחק קבוצה",
+                                on_click=lambda e, g=group: self.confirm_delete_group(g)
+                            ),
+                            ft.Container(
+                                content=ft.Icon(ft.Icons.ARROW_FORWARD_IOS, size=16, color="#cbd5e0"),
+                                padding=ft.padding.all(4),
+                            )
+                        ], spacing=0)
                     ], horizontal_alignment=ft.CrossAxisAlignment.END, spacing=8),
                 ], spacing=16, alignment=ft.MainAxisAlignment.START),
             ], spacing=0),
@@ -149,9 +183,39 @@ class GroupsPage:
                 offset=ft.Offset(0, 2),
             ),
             animate=ft.Animation(200, ft.AnimationCurve.EASE_OUT),
-            on_click=lambda e, name=group["name"]: self.show_students(name),
+            on_click=lambda e, name=group.get("name", ""): self.show_students(name),
             ink=True,
         )
+
+    def show_success_message(self, message, is_error=False):
+        """Show success/error message"""
+        snack_bar = ft.SnackBar(
+            content=ft.Text(message, color="white"),
+            bgcolor="#f56565" if is_error else "#48bb78"
+        )
+        self.page.snack_bar = snack_bar
+        self.page.snack_bar.open = True
+        self.page.update()
+
+    def edit_group(self, group):
+        """Open edit dialog for group"""
+        def on_success(message, is_error=False):
+            self.show_success_message(message, is_error)
+            if not is_error:
+                self.build_group_buttons()
+        
+        dialog = GroupDialogs.create_edit_dialog(self.page, group, on_success)
+        self.page.open(dialog)
+
+    def confirm_delete_group(self, group):
+        """Show confirmation dialog before deleting group"""
+        def on_success(message, is_error=False):
+            self.show_success_message(message, is_error)
+            if not is_error:
+                self.build_group_buttons()
+        
+        dialog = GroupDialogs.create_delete_confirmation_dialog(self.page, group, on_success)
+        self.page.open(dialog)
 
     def get_view(self):
         return self.main_layout

@@ -29,7 +29,8 @@
                     "payment_method": "צ'ק",
                     "check_number": "1253652"
                 }
-            ]
+            ],
+            "has_sister": true
         },
         {
             "id": "032784738",
@@ -176,6 +177,26 @@
             "group": "בלט",
             "payment_status": "חוב",
             "join_date": "17/06/2025",
+            "has_sister": true,
+            "payments": []
+        },
+        {
+            "id": "215639652",
+            "name": "חיה מילר",
+            "phone": "0583265896",
+            "group": "מחול מודרני",
+            "payment_status": "חוב",
+            "join_date": "18/06/2025",
+            "has_sister": true,
+            "payments": []
+        },
+        {
+            "id": "256398854",
+            "name": "חיהלה ויספיש",
+            "phone": "0556784253",
+            "group": "מחול מודרני",
+            "payment_status": "חוב",
+            "join_date": "18/06/2025",
             "has_sister": true,
             "payments": []
         }

@@ -1,5 +1,4 @@
 import flet as ft
-from components.add_groups_form_fields import FormFields
 from utils.groups_data_manager import GroupsDataManager
 
 
@@ -73,20 +72,19 @@ class AddGroupPage:
                 key='day_of_week'
             ),
             'phone': self._create_text_field(
-                label="טלפון",
-                hint="מספר טלפון",
+                label="טלפון המורה",
+                hint="מספר טלפון של המורה",
                 icon=ft.Icons.PHONE,
                 keyboard_type=ft.KeyboardType.PHONE,
                 key='phone'
             ),
             'email': self._create_text_field(
-                label="אימייל",
-                hint="כתובת אימייל",
+                label="אימייל המורה",
+                hint="כתובת אימייל של המורה",
                 icon=ft.Icons.EMAIL_OUTLINED,
                 keyboard_type=ft.KeyboardType.EMAIL,
                 key='email'
             ),
-
         }
 
     def _create_text_field(self, label, hint, icon, key, suffix=None, keyboard_type=None):
@@ -278,11 +276,10 @@ class AddGroupPage:
                 ),
             ]),
 
-
             ft.ResponsiveRow([
                 ft.Container(
                     content=self.form_fields['phone'],
-                    col={"xs": 12, "sm": 12, "md":6},
+                    col={"xs": 12, "sm": 12, "md": 6},
                     padding=ft.padding.only(bottom=20, right=12)
                 ),
                 ft.Container(
@@ -382,33 +379,72 @@ class AddGroupPage:
             self.groups_page.refresh()
         self.navigation_callback(None, 1)
 
+    def _show_message(self, message, is_error=False):
+        """Show message to user using SnackBar"""
+        try:
+            snack_bar = ft.SnackBar(
+                content=ft.Text(message),
+                bgcolor=ft.Colors.RED_400 if is_error else ft.Colors.GREEN_400
+            )
+            self.page.snack_bar = snack_bar
+            snack_bar.open = True
+            self.page.update()
+        except Exception as e:
+            print(f"Error showing message: {e}")
+            print(f"Message was: {message}")
+
     def _handle_save(self, e):
         """Handle save button click"""
+        # וודא שהמחיר הוא מספר תקין
+        price_field_value = self.form_fields['price'].value
+        price_value = price_field_value.strip() if price_field_value else ""
+        
+        if price_value and not price_value.isdigit():
+            self._show_message("המחיר חייב להיות מספר תקין", True)
+            return
+        
+        # בדיקה נוספת לוודא שהערך תקין
+        try:
+            price_int = int(price_value) if price_value and price_value.isdigit() else 0
+        except (ValueError, TypeError):
+            price_int = 0
+        
         group_data = {
             "name": self.form_fields['name'].value.strip() if self.form_fields['name'].value else "",
             "location": self.form_fields['location'].value.strip() if self.form_fields['location'].value else "",
-            "price": self.form_fields['price'].value.strip() if self.form_fields['price'].value else "",
+            "price": price_int,
             "age_group": self.form_fields['age'].value.strip() if self.form_fields['age'].value else "",
             "teacher": self.form_fields['teacher'].value.strip() if self.form_fields['teacher'].value else "",
             "group_start_date": self.form_fields['start_date'].value.strip() if self.form_fields['start_date'].value else "",
             "day_of_week": self.form_fields['day_of_week'].value.strip() if self.form_fields['day_of_week'].value else "",
-            "phone": self.form_fields['phone'].value.strip() if self.form_fields['phone'].value else "",
-            "email": self.form_fields['email'].value.strip() if self.form_fields['email'].value else "",
+            "teacher_phone": self.form_fields['phone'].value.strip() if self.form_fields['phone'].value else "",
+            "teacher_email": self.form_fields['email'].value.strip() if self.form_fields['email'].value else "",
         }
+        
+        # Debug: הדפסת הנתונים שנשלחים
+        print("Group data to save:")
+        for key, value in group_data.items():
+            print(f"{key}: '{value}' (type: {type(value)})")
         
         # Validate form data
         is_valid, error_message = self.data_manager.validate_group_data(group_data)
         if not is_valid:
-            # Navigate to groups page even on validation error
-            self._navigate_to_groups()
+            print(f"Validation error: {error_message}")
+            self._show_message(f"שגיאה בוולידציה: {error_message}", True)
             return
         
         # Save group
         success, message = self.data_manager.save_group(group_data)
         
-        # Reset form and navigate to groups page regardless of success/failure
-        self._reset_form()
-        self._navigate_to_groups()
+        if success:
+            print("Group saved successfully")
+            self._show_message("הקבוצה נשמרה בהצלחה!")
+            # Reset form and navigate to groups page
+            self._reset_form()
+            self._navigate_to_groups()
+        else:
+            print(f"Save error: {message}")
+            self._show_message(f"שגיאה בשמירה: {message}", True)
 
     def _handle_cancel(self, e):
         """Handle cancel button click"""
@@ -418,8 +454,9 @@ class AddGroupPage:
         """Reset form to initial state"""
         for key in self.form_state:
             self.form_state[key] = ''
-            self.form_fields[key].value = ""
-            self.form_fields[key].update()
+            if key in self.form_fields:
+                self.form_fields[key].value = ""
+                self.form_fields[key].update()
 
     def get_view(self):
         return self.main_layout
@@ -431,3 +468,4 @@ class AddGroupPage:
     def go_back(self, e):
         """Legacy method - delegates to new handler""" 
         self._handle_cancel(e)
+
