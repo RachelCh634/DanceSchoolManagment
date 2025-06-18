@@ -66,15 +66,16 @@ class GroupsDataManager:
             
         except Exception as ex:
             return False, f"שגיאה בשמירת הקובץ: {ex}"
-    
+
     def validate_group_data(self, data):
         """Validate group data"""
-        required_fields = ["name", "location", "price", "age_group", "teacher", "group_start_date", "day_of_week", "teacher_phone", "teacher_email"]
-        
+        required_fields = ["name", "location", "price", "age_group", "teacher", "group_start_date", "day_of_week",
+                           "teacher_phone", "teacher_email"]
+
         for field in required_fields:
-            field_value = data.get(field, "")
-            # המרה לstring לפני strip כדי למנוע שגיאה
-            if not str(field_value).strip():
+            value = data.get(field, None)
+            if value is None or (isinstance(value, str) and not value.strip()):
                 return False, "נא למלא את כל השדות"
-        
+
         return True, ""
+

@@ -1,5 +1,7 @@
 import flet as ft
 from utils.groups_data_manager import GroupsDataManager
+import re
+from datetime import datetime
 
 
 class AddGroupPage:
@@ -21,6 +23,20 @@ class AddGroupPage:
             'email':'',
         }
 
+        # הגדרת שדות חובה
+        self.required_fields = {
+            'name': 'שם הקבוצה',
+            'location': 'מיקום',
+            'price': 'מחיר',
+            'age': 'קבוצת גיל',
+            'teacher': 'מורה/מדריך',
+            'start_date': 'תאריך התחלה',
+            'day_of_week': 'יום בשבוע'
+        }
+
+        # שגיאות ולידציה
+        self.validation_errors = {}
+        
         self.form_fields = self._create_form_fields()
         self.main_layout = self._render()
 
@@ -28,48 +44,55 @@ class AddGroupPage:
         """Create styled form fields with modern React-like approach"""
         return {
             'name': self._create_text_field(
-                label="שם הקבוצה",
+                label="שם הקבוצה *",
                 hint="הכנס שם קבוצה",
                 icon=ft.Icons.BADGE_OUTLINED,
-                key='name'
+                key='name',
+                required=True
             ),
             'location': self._create_text_field(
-                label="מיקום",
+                label="מיקום *",
                 hint="מיקום הקבוצה",
                 icon=ft.Icons.LOCATION_ON_OUTLINED,
-                key='location'
+                key='location',
+                required=True
             ),
             'price': self._create_text_field(
-                label="מחיר",
+                label="מחיר *",
                 hint="מחיר לשיעור",
                 icon=ft.Icons.PAYMENTS_OUTLINED,
                 suffix="₪",
                 keyboard_type=ft.KeyboardType.NUMBER,
-                key='price'
+                key='price',
+                required=True
             ),
             'age': self._create_text_field(
-                label="קבוצת גיל",
-                hint="טווח גילאים",
+                label="קבוצת גיל *",
+                hint="טווח גילאים (לדוג' 6-8)",
                 icon=ft.Icons.GROUPS_OUTLINED,
-                key='age'
+                key='age',
+                required=True
             ),
             'teacher': self._create_text_field(
-                label="מורה/מדריך",
+                label="מורה/מדריך *",
                 hint="שם המורה או המדריך",
                 icon=ft.Icons.PERSON_OUTLINE,
-                key='teacher'
+                key='teacher',
+                required=True
             ),
             'start_date': self._create_text_field(
-                label="תאריך התחלה",
+                label="תאריך התחלה *",
                 hint="dd/mm/yyyy",
                 icon=ft.Icons.DATE_RANGE_OUTLINED,
-                key='start_date'
+                key='start_date',
+                required=True
             ),
             'day_of_week': self._create_text_field(
-                label="יום בשבוע",
+                label="יום בשבוע *",
                 hint="לדוג' ראשון, שני, שלישי...",
                 icon=ft.Icons.CALENDAR_VIEW_WEEK,
-                key='day_of_week'
+                key='day_of_week',
+                required=True
             ),
             'phone': self._create_text_field(
                 label="טלפון המורה",
@@ -87,7 +110,7 @@ class AddGroupPage:
             ),
         }
 
-    def _create_text_field(self, label, hint, icon, key, suffix=None, keyboard_type=None):
+    def _create_text_field(self, label, hint, icon, key, suffix=None, keyboard_type=None, required=False):
         """Create a modern text field component (React-like component)"""
         field = ft.TextField(
             label=label,
@@ -117,13 +140,249 @@ class AddGroupPage:
             content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
             cursor_color="#3b82f6",
             selection_color=ft.Colors.with_opacity(0.2, "#3b82f6"),
-            on_change=lambda e, field_key=key: self._handle_field_change(field_key, e.control.value)
+            on_change=lambda e, field_key=key: self._handle_field_change(field_key, e.control.value),
+            on_blur=lambda e, field_key=key: self._validate_field(field_key, e.control.value) if required else None
         )
         return field
 
     def _handle_field_change(self, key, value):
         """Handle field changes (React-like state management)"""
         self.form_state[key] = value
+        # נקה שגיאות קודמות כשהמשתמש מתחיל להקליד
+        if key in self.validation_errors:
+            del self.validation_errors[key]
+            self._update_field_style(key)
+
+    def _validate_field(self, key, value):
+        """Validate individual field"""
+        error = None
+        
+        # בדיקת שדות חובה
+        if key in self.required_fields and (not value or not value.strip()):
+            error = f"{self.required_fields[key]} הוא שדה חובה"
+        
+        # ולידציות ספציפיות
+        elif value and value.strip():
+            if key == 'email' and value:
+                if not self._is_valid_email(value):
+                    error = "כתובת אימייל לא תקינה"
+            
+            elif key == 'phone' and value:
+                if not self._is_valid_phone(value):
+                    error = "מספר טלפון לא תקין"
+            
+            elif key == 'price':
+                if not value.isdigit() or int(value) <= 0:
+                    error = "המחיר חייב להיות מספר חיובי"
+            
+            elif key == 'start_date':
+                if not self._is_valid_date(value):
+                    error = "תאריך לא תקין (dd/mm/yyyy)"
+            
+            elif key == 'name':
+                if len(value.strip()) < 2:
+                    error = "שם הקבוצה חייב להכיל לפחות 2 תווים"
+            
+            elif key == 'teacher':
+                if len(value.strip()) < 2:
+                    error = "שם המורה חייב להכיל לפחות 2 תווים"
+                    
+            
+        
+        # עדכן את מצב השגיאה
+        if error:
+            self.validation_errors[key] = error
+        elif key in self.validation_errors:
+            del self.validation_errors[key]
+        
+        self._update_field_style(key)
+        return error is None
+
+    def _update_field_style(self, key):
+        """Update field style based on validation state"""
+        field = self.form_fields.get(key)
+        if not field:
+            return
+        
+        if key in self.validation_errors:
+            # שדה עם שגיאה
+            field.border_color = "#ef4444"
+            field.focused_border_color = "#dc2626"
+            field.error_text = self.validation_errors[key]
+        else:
+            # שדה תקין
+            field.border_color = "#e1e7ef"
+            field.focused_border_color = "#3b82f6"
+            field.error_text = None
+        
+        try:
+            field.update()
+        except:
+            pass
+
+    def _is_valid_email(self, email):
+        """Validate email format"""
+        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        return re.match(pattern, email) is not None
+
+    def _is_valid_phone(self, phone):
+        """Validate Israeli phone number format"""
+        # הסרת רווחים ומקפים
+        phone = re.sub(r'[\s-]', '', phone)
+        
+        # בדיקת פורמטים ישראליים נפוצים
+        patterns = [
+            r'^0[2-9]\d{7,8}$',  # קווי בבית
+            r'^05[0-9]\d{7}$',   # סלולר
+            r'^1[5-9]\d{2,3}$',  # מספרים קצרים
+            r'^\+972[2-9]\d{7,8}$',  # קוד בין-לאומי
+        ]
+        
+        return any(re.match(pattern, phone) for pattern in patterns)
+
+    def _is_valid_date(self, date_str):
+        """Validate date format dd/mm/yyyy"""
+        try:
+            datetime.strptime(date_str, '%d/%m/%Y')
+            return True
+        except ValueError:
+            return False
+
+    def _validate_all_fields(self):
+        """Validate all form fields"""
+        self.validation_errors.clear()
+        all_valid = True
+        
+        for key, value in self.form_state.items():
+            field_value = value.strip() if value else ""
+            if not self._validate_field(key, field_value):
+                all_valid = False
+        
+        return all_valid
+
+    def _show_validation_dialog(self):
+        """Show validation errors dialog"""
+        error_messages = []
+        
+        # הוסף שגיאות של שדות חובה
+        for key, label in self.required_fields.items():
+            if key in self.validation_errors:
+                error_messages.append(f"• {self.validation_errors[key]}")
+        
+        # הוסף שגיאות אחרות
+        for key, error in self.validation_errors.items():
+            if key not in self.required_fields:
+                error_messages.append(f"• {error}")
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Row([
+                ft.Icon(ft.Icons.ERROR_OUTLINE, color="#ef4444", size=28),
+                ft.Text("שגיאות בטופס", size=20, weight=ft.FontWeight.BOLD, color="#ef4444")
+            ], spacing=12),
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text(
+                        "יש לתקן את השגיאות הבאות:",
+                        size=16,
+                        color="#64748b",
+                        weight=ft.FontWeight.W_500
+                    ),
+                    ft.Container(height=16),
+                    ft.Column([
+                        ft.Text(
+                            error,
+                            size=14,
+                            color="#0f172a"
+                        ) for error in error_messages[:10]  # הגבל ל-10 שגיאות
+                    ], spacing=8),
+                ], spacing=0),
+                width=400,
+                padding=ft.padding.all(20)
+            ),
+            actions=[
+                ft.Container(
+                    content=ft.TextButton(
+                        "הבנתי",
+                        on_click=lambda e: self._close_dialog(),
+                        style=ft.ButtonStyle(
+                            color="#3b82f6",
+                            text_style=ft.TextStyle(
+                                weight=ft.FontWeight.BOLD,
+                                size=16
+                            )
+                        )
+                    ),
+                    padding=ft.padding.symmetric(horizontal=20, vertical=10)
+                )
+            ],
+            actions_alignment=ft.MainAxisAlignment.CENTER,
+            shape=ft.RoundedRectangleBorder(radius=16),
+            bgcolor="#ffffff",
+            elevation=8
+        )
+        
+        self.page.dialog = dialog
+        dialog.open = True
+        self.page.update()
+
+    def _close_dialog(self):
+        """Close the dialog"""
+        if self.page.dialog:
+            self.page.dialog.open = False
+            self.page.update()
+
+    def _show_success_dialog(self):
+        """Show success dialog"""
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Row([
+                ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE, color="#10b981", size=28),
+                ft.Text("הצלחה!", size=20, weight=ft.FontWeight.BOLD, color="#10b981")
+            ], spacing=12),
+            content=ft.Container(
+                content=ft.Text(
+                    "הקבוצה נשמרה בהצלחה במערכת",
+                    size=16,
+                    color="#64748b",
+                    text_align=ft.TextAlign.CENTER
+                ),
+                width=300,
+                padding=ft.padding.all(20)
+            ),
+            actions=[
+                ft.Container(
+                    content=ft.ElevatedButton(
+                        "אישור",
+                        on_click=lambda e: self._handle_success_dialog_close(),
+                        style=ft.ButtonStyle(
+                            bgcolor="#10b981",
+                            color="white",
+                            text_style=ft.TextStyle(
+                                weight=ft.FontWeight.BOLD,
+                                size=16
+                            ),
+                            shape=ft.RoundedRectangleBorder(radius=8)
+                        )
+                    ),
+                    padding=ft.padding.symmetric(horizontal=20, vertical=10)
+                )
+            ],
+            actions_alignment=ft.MainAxisAlignment.CENTER,
+            shape=ft.RoundedRectangleBorder(radius=16),
+            bgcolor="#ffffff",
+            elevation=8
+        )
+        
+        self.page.dialog = dialog
+        dialog.open = True
+        self.page.update()
+
+    def _handle_success_dialog_close(self):
+        """Handle success dialog close"""
+        self._close_dialog()
+        self._reset_form()
+        self._navigate_to_groups()
 
     def _render(self):
         """Main render method (React-like)"""
@@ -163,7 +422,7 @@ class AddGroupPage:
                             color="#0f172a"
                         ),
                         ft.Text(
-                            "מלא את הפרטים הנדרשים ליצירת קבוצה חדשה במערכת",
+                            "מלא את הפרטים הנדרשים ליצירת קבוצה חדשה במערכת. שדות עם * הם חובה",
                             size=16,
                             color="#64748b",
                             weight=ft.FontWeight.W_400
@@ -379,46 +638,34 @@ class AddGroupPage:
             self.groups_page.refresh()
         self.navigation_callback(None, 1)
 
-    def _show_message(self, message, is_error=False):
-        """Show message to user using SnackBar"""
-        try:
-            snack_bar = ft.SnackBar(
-                content=ft.Text(message),
-                bgcolor=ft.Colors.RED_400 if is_error else ft.Colors.GREEN_400
-            )
-            self.page.snack_bar = snack_bar
-            snack_bar.open = True
-            self.page.update()
-        except Exception as e:
-            print(f"Error showing message: {e}")
-            print(f"Message was: {message}")
-
     def _handle_save(self, e):
-        """Handle save button click"""
-        # וודא שהמחיר הוא מספר תקין
-        price_field_value = self.form_fields['price'].value
-        price_value = price_field_value.strip() if price_field_value else ""
+        """Handle save button click with validation"""
+        # עדכן את form_state עם הערכים הנוכחיים
+        for key, field in self.form_fields.items():
+            self.form_state[key] = field.value or ""
         
-        if price_value and not price_value.isdigit():
-            self._show_message("המחיר חייב להיות מספר תקין", True)
+        # בצע ולידציה מלאה
+        if not self._validate_all_fields():
+            self._show_validation_dialog()
             return
         
-        # בדיקה נוספת לוודא שהערך תקין
+        # הכן נתונים לשמירה
+        price_value = self.form_state['price'].strip()
         try:
             price_int = int(price_value) if price_value and price_value.isdigit() else 0
         except (ValueError, TypeError):
             price_int = 0
         
         group_data = {
-            "name": self.form_fields['name'].value.strip() if self.form_fields['name'].value else "",
-            "location": self.form_fields['location'].value.strip() if self.form_fields['location'].value else "",
+            "name": self.form_state['name'].strip(),
+            "location": self.form_state['location'].strip(),
             "price": price_int,
-            "age_group": self.form_fields['age'].value.strip() if self.form_fields['age'].value else "",
-            "teacher": self.form_fields['teacher'].value.strip() if self.form_fields['teacher'].value else "",
-            "group_start_date": self.form_fields['start_date'].value.strip() if self.form_fields['start_date'].value else "",
-            "day_of_week": self.form_fields['day_of_week'].value.strip() if self.form_fields['day_of_week'].value else "",
-            "teacher_phone": self.form_fields['phone'].value.strip() if self.form_fields['phone'].value else "",
-            "teacher_email": self.form_fields['email'].value.strip() if self.form_fields['email'].value else "",
+            "age_group": self.form_state['age'].strip(),
+            "teacher": self.form_state['teacher'].strip(),
+            "group_start_date": self.form_state['start_date'].strip(),
+            "day_of_week": self.form_state['day_of_week'].strip(),
+            "teacher_phone": self.form_state['phone'].strip(),
+            "teacher_email": self.form_state['email'].strip(),
         }
         
         # Debug: הדפסת הנתונים שנשלחים
@@ -426,11 +673,11 @@ class AddGroupPage:
         for key, value in group_data.items():
             print(f"{key}: '{value}' (type: {type(value)})")
         
-        # Validate form data
+        # Validate form data with data manager
         is_valid, error_message = self.data_manager.validate_group_data(group_data)
         if not is_valid:
-            print(f"Validation error: {error_message}")
-            self._show_message(f"שגיאה בוולידציה: {error_message}", True)
+            print(f"Data manager validation error: {error_message}")
+            self._show_error_dialog(f"שגיאה בוולידציה: {error_message}")
             return
         
         # Save group
@@ -438,13 +685,54 @@ class AddGroupPage:
         
         if success:
             print("Group saved successfully")
-            self._show_message("הקבוצה נשמרה בהצלחה!")
-            # Reset form and navigate to groups page
-            self._reset_form()
-            self._navigate_to_groups()
+            self._show_success_dialog()
         else:
             print(f"Save error: {message}")
-            self._show_message(f"שגיאה בשמירה: {message}", True)
+            self._show_error_dialog(f"שגיאה בשמירה: {message}")
+
+    def _show_error_dialog(self, message):
+        """Show error dialog"""
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Row([
+                ft.Icon(ft.Icons.ERROR_OUTLINE, color="#ef4444", size=28),
+                ft.Text("שגיאה", size=20, weight=ft.FontWeight.BOLD, color="#ef4444")
+            ], spacing=12),
+            content=ft.Container(
+                content=ft.Text(
+                    message,
+                    size=16,
+                    color="#64748b",
+                    text_align=ft.TextAlign.CENTER
+                ),
+                width=350,
+                padding=ft.padding.all(20)
+            ),
+            actions=[
+                ft.Container(
+                    content=ft.TextButton(
+                        "הבנתי",
+                        on_click=lambda e: self._close_dialog(),
+                        style=ft.ButtonStyle(
+                            color="#ef4444",
+                            text_style=ft.TextStyle(
+                                weight=ft.FontWeight.BOLD,
+                                size=16
+                            )
+                        )
+                    ),
+                    padding=ft.padding.symmetric(horizontal=20, vertical=10)
+                )
+            ],
+            actions_alignment=ft.MainAxisAlignment.CENTER,
+            shape=ft.RoundedRectangleBorder(radius=16),
+            bgcolor="#ffffff",
+            elevation=8
+        )
+        
+        self.page.dialog = dialog
+        dialog.open = True
+        self.page.update()
 
     def _handle_cancel(self, e):
         """Handle cancel button click"""
@@ -456,7 +744,15 @@ class AddGroupPage:
             self.form_state[key] = ''
             if key in self.form_fields:
                 self.form_fields[key].value = ""
-                self.form_fields[key].update()
+                self.form_fields[key].error_text = None
+                self.form_fields[key].border_color = "#e1e7ef"
+                self.form_fields[key].focused_border_color = "#3b82f6"
+                try:
+                    self.form_fields[key].update()
+                except:
+                    pass
+        
+        self.validation_errors.clear()
 
     def get_view(self):
         return self.main_layout
@@ -468,4 +764,3 @@ class AddGroupPage:
     def go_back(self, e):
         """Legacy method - delegates to new handler""" 
         self._handle_cancel(e)
-
