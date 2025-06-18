@@ -71,7 +71,8 @@
                 {
                     "amount": "1200",
                     "date": "27/05/2025",
-                    "payment_method": "צק"
+                    "payment_method": "צ'ק",
+                    "check_number": "123456"
                 }
             ]
         },
@@ -131,51 +132,11 @@
             ]
         },
         {
-            "id": "324344545",
-            "name": "תמר",
-            "phone": "0527144636",
-            "group": "בלט",
-            "payment_status": "חוב",
-            "join_date": "17/06/2025",
-            "payments": [],
-            "has_sister": true
-        },
-        {
-            "id": "123456789",
-            "name": "יעלוש",
-            "phone": "0556576455",
-            "group": "בלט",
-            "payment_status": "חוב",
-            "join_date": "17/06/2025",
-            "payments": [],
-            "has_sister": true
-        },
-        {
             "id": "000999000",
             "name": "חבצלת",
             "phone": "01231232",
             "group": "היפ הופ",
             "payment_status": "יתרת זכות",
-            "join_date": "17/06/2025",
-            "has_sister": true,
-            "payments": []
-        },
-        {
-            "id": "123432123",
-            "name": "שרונה",
-            "phone": "98765432",
-            "group": "בלט",
-            "payment_status": "חוב",
-            "join_date": "17/06/2025",
-            "has_sister": true,
-            "payments": []
-        },
-        {
-            "id": "123456765",
-            "name": "מיכלי",
-            "phone": "055555555",
-            "group": "בלט",
-            "payment_status": "חוב",
             "join_date": "17/06/2025",
             "has_sister": true,
             "payments": []

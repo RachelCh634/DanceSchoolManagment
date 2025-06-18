@@ -115,7 +115,7 @@ class PaymentsView:
                         )
                     ], spacing=2),
                     ft.Text(
-                        payment['payment_method'],
+                        f"צ'ק #{payment['check_number']}" if payment['payment_method'] == 'צ\'ק' and payment.get('check_number') else payment['payment_method'],
                         size=12,
                         color=ft.Colors.BLUE_600
                     )

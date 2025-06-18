@@ -161,25 +161,19 @@ class StudentsListView:
         """Filter students based on search query"""
         query = e.control.value.strip() if e and e.control and e.control.value else ""
         
-        print(f"חיפוש: '{query}'")  # דיבוג
-        
         if not query:
             self.filtered_students = self.current_students.copy()
-            print(f"אין חיפוש - מציג {len(self.filtered_students)} תלמידות")
         else:
             self.filtered_students = self.data_manager.filter_students(self.current_students, query)
-            print(f"נמצאו {len(self.filtered_students)} תלמידות")
             
             # Show no results dialog if no matches
             if not self.filtered_students:
-                print("מציג דיאלוג - אין תוצאות")
                 NoResultsDialog.show(self.page)
         
         self.update_components()
     
     def refresh_data(self, e=None):
         """Refresh students data"""
-        print("מרענן נתונים...")
         self.load_data()
         self.update_components()
         
@@ -193,7 +187,6 @@ class StudentsListView:
     
     def clear_search(self, e=None):
         """Clear search and show all students"""
-        print("מנקה חיפוש...")
         if self.search_field:
             self.search_field.value = ""
             self.search_field.update()
@@ -226,7 +219,6 @@ class StudentsListView:
         """Load students data"""
         self.current_students = self.data_manager.load_students()
         self.filtered_students = self.current_students.copy()
-        print(f"נטענו {len(self.current_students)} תלמידות")
     
     def render(self):
         """Render the complete view"""

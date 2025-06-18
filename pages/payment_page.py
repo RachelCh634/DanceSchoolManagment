@@ -23,15 +23,21 @@ class PaymentPage:
                         group_name = student.get("group", "")
                         
                         for payment in student.get("payments", []):
-                            self.payments_data.append({
+                            payment_data = {
                                 "student_name": student_name,
                                 "amount": payment.get("amount", "0"),
                                 "date": payment.get("date", ""),
                                 "payment_method": payment.get("payment_method", ""),
                                 "group": group_name
-                            })
+                            }
+                            
+                            if payment.get("check_number"):
+                                payment_data["check_number"] = payment.get("check_number")
+                            
+                            self.payments_data.append(payment_data)
         except Exception as e:
             print(f"Error loading payments: {e}")
+
 
     def create_stats_card(self, title, value, icon, color, subtitle=""):
         """Create a modern statistics card"""
@@ -181,18 +187,28 @@ class PaymentPage:
         
         # Payment method styling
         payment_method = payment["payment_method"]
+        check_number = payment.get("check_number", "")
+        
         if payment_method == "מזומן":
             method_color = ft.Colors.ORANGE_600
             method_bg = ft.Colors.with_opacity(0.1, ft.Colors.ORANGE_600)
             method_icon = ft.Icons.MONEY
+            method_text = payment_method
+        elif payment_method == "צ'ק":
+            method_color = ft.Colors.PINK_600
+            method_bg = ft.Colors.with_opacity(0.1, ft.Colors.PINK_600)
+            method_icon = ft.Icons.RECEIPT
+            method_text = f"צ'ק #{check_number}" if check_number else "צ'ק"
         elif payment_method == "העברה בנקאית" or payment_method == "העברה":
             method_color = ft.Colors.PURPLE_600
             method_bg = ft.Colors.with_opacity(0.1, ft.Colors.PURPLE_600)
             method_icon = ft.Icons.ACCOUNT_BALANCE
+            method_text = payment_method
         else:
             method_color = ft.Colors.BLUE_600
             method_bg = ft.Colors.with_opacity(0.1, ft.Colors.BLUE_600)
             method_icon = ft.Icons.CREDIT_CARD
+            method_text = payment_method
 
         cell_style = {
             "bgcolor": row_color,
@@ -242,7 +258,7 @@ class PaymentPage:
                         content=ft.Row([
                             ft.Icon(method_icon, size=14, color=method_color),
                             ft.Text(
-                                payment_method, 
+                                method_text, 
                                 size=13, 
                                 weight=ft.FontWeight.W_500,
                                 color=method_color,
@@ -274,6 +290,7 @@ class PaymentPage:
             ], spacing=0),
             border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.1, ft.Colors.GREY_400))),
         )
+
 
     def create_empty_state(self):
         """Create empty state when no payments exist"""
