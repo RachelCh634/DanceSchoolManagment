@@ -69,13 +69,13 @@ class GroupsDataManager:
 
     def validate_group_data(self, data):
         """Validate group data"""
-        required_fields = ["name", "location", "price", "age_group", "teacher", "group_start_date", "day_of_week",
-                           "teacher_phone", "teacher_email"]
+        required_fields = ["name", "location", "price", "age_group", "teacher", "group_start_date", "day_of_week"]
 
         for field in required_fields:
             value = data.get(field, None)
             if value is None or (isinstance(value, str) and not value.strip()):
-                return False, "נא למלא את כל השדות"
-
+                return False, "נא למלא את כל השדות החובה"
+            
         return True, ""
+
 
