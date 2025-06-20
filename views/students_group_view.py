@@ -98,8 +98,39 @@ class StudentsGroupView:
         )
         self.parent.layout.controls.append(students_grid)
 
+    def _is_student_in_multiple_groups(self, student_id):
+        """Check if student is in multiple groups"""
+        try:
+            all_students = self.data_manager.get_all_students()
+            
+            if all_students:
+                for student in all_students:
+                    if isinstance(student, dict) and student.get('id') == student_id:
+                        # Get student groups using helper function
+                        student_groups = self._get_student_groups(student)
+                        return len(student_groups) > 1
+            return False
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def _get_student_groups(self, student):
+        """Get student groups - supports both old and new format"""
+        if "groups" in student:
+            return student["groups"]
+        elif "group" in student:
+            return [student["group"]]
+        else:
+            return []
+
+
     def _create_student_card(self, student):
         """Create a student card"""
+        # Check if student is in multiple groups
+        is_multi_group = self._is_student_in_multiple_groups(student['id'])
+        
         # Avatar
         avatar = ft.Container(
             content=ft.Text(
@@ -127,19 +158,36 @@ class StudentsGroupView:
             border_radius=4
         )
         
+        # Student name with star if in multiple groups
+        name_controls = [
+            ft.Text(
+                student['name'],
+                size=16,
+                weight=ft.FontWeight.W_600,
+                color=ft.Colors.GREY_800,
+                overflow=ft.TextOverflow.ELLIPSIS
+            )
+        ]
+        
+        if is_multi_group:
+            name_controls.append(
+                ft.Icon(
+                    ft.Icons.STAR,
+                    size=20,
+                    color=ft.Colors.AMBER_600,
+                    tooltip="תלמידה במספר קבוצות"
+                )
+            )
+        
+        name_row = ft.Row(name_controls, spacing=8)
+        
         # Card content
         card_content = ft.Column([
             # Header
             ft.Row([
                 avatar,
                 ft.Column([
-                    ft.Text(
-                        student['name'],
-                        size=16,
-                        weight=ft.FontWeight.W_600,
-                        color=ft.Colors.GREY_800,
-                        overflow=ft.TextOverflow.ELLIPSIS
-                    ),
+                    name_row,
                     ft.Row([
                         status_dot,
                         ft.Text(
@@ -212,7 +260,7 @@ class StudentsGroupView:
                 ft.Icons.DELETE_OUTLINE,
                 ft.Colors.RED_400,
                 "מחיקה",
-                lambda e: self.parent.delete_student(student['name']),
+                lambda e: self.parent.delete_student(student),
                 ft.Colors.RED_50
             )
         ], spacing=4, alignment=ft.MainAxisAlignment.END)

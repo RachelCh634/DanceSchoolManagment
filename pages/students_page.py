@@ -29,7 +29,6 @@ class StudentsPage:
             animate_opacity=300,
         )
         
-        # Initialize with students list
         self.show_students()
 
     def go_back(self, e=None):
@@ -38,9 +37,6 @@ class StudentsPage:
             self.navigation_callback(None, 0)
         else:
             self.navigation_callback(None, 1)
-
-    # השאר נשאר אותו דבר...
-
 
     def get_view(self):
         """Get the main view container"""
@@ -72,18 +68,21 @@ class StudentsPage:
         add_payment_view = AddPaymentView(self, student)
         add_payment_view.render()
 
-    def delete_student(self, student_name):
-        """Delete student with confirmation"""
-        print(f"delete_student called with: {student_name}")
+    def delete_student(self, student):
+        """Delete student from group with confirmation"""
+        student_name = student.get('name', '')
+        student_id = student.get('id', '')
+        
+        print(f"delete_student called with: {student_name} (ID: {student_id})")
         
         def confirm_delete():
-            print(f"Confirming delete for: {student_name}")
-            success = self.data_manager.delete_student(student_name)
+            print(f"Confirming delete for: {student_name} (ID: {student_id}) from group: {self.group_name}")
+            success = self.data_manager.delete_student_from_group(student_id, self.group_name)
             
             if success:
                 print("Delete successful")
                 self.dialog.show_success(
-                    f"{student_name} נמחקה",
+                    f"{student_name} נמחקה מהקבוצה {self.group_name}",
                     callback=self.show_students
                 )
             else:
@@ -92,11 +91,10 @@ class StudentsPage:
         
         print("Showing confirmation dialog")
         self.dialog.show_confirmation(
-            f"האם למחוק את '{student_name}'?",
-            "פעולה זו לא ניתנת לביטול",
+            f"האם למחוק את '{student_name}' מהקבוצה '{self.group_name}'?",
+            "אם זו הקבוצה האחרונה של התלמידה, היא תמחק לגמרי",
             confirm_delete
         )
-
 
     def _perform_delete(self, student_name):
         """Perform the actual deletion"""

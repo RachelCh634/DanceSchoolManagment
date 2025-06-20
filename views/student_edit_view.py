@@ -17,7 +17,6 @@ class StudentEditView:
         
         self.name_field = None
         self.phone_field = None
-        self.group_field = None
         self.payment_field = None
         self.join_date_field = None
         self.has_sister_checkbox= None
@@ -64,7 +63,7 @@ class StudentEditView:
                         color="#0f172a"
                     ),
                     ft.Text(
-                        f"{self.student['name']}",
+                        f"{self.student['name']} - {', '.join(self.student.get('groups', []))}",
                         size=16,
                         weight=ft.FontWeight.W_500,
                         color="#64748b"
@@ -119,11 +118,31 @@ class StudentEditView:
             keyboard_type=ft.KeyboardType.PHONE
         )
         
-        self.group_field = self._create_modern_text_field(
-            label="קבוצה",
-            value=self.student['group'],
-            icon=ft.Icons.GROUP_OUTLINED,
-            hint="שם הקבוצה"
+        # Display group as read-only text instead of editable field
+        group_display = ft.Container(
+            content=ft.Column([
+                ft.Text(
+                    "קבוצה",
+                    size=14,
+                    weight=ft.FontWeight.W_500,
+                    color="#64748b"
+                ),
+                ft.Container(
+                    content=ft.Row([
+                        ft.Icon(ft.Icons.GROUP_OUTLINED, size=20, color="#64748b"),
+                        ft.Text(
+                            ', '.join(self.student.get('groups', [])),
+                            size=16,
+                            weight=ft.FontWeight.W_400,
+                            color="#0f172a"
+                        )
+                    ], spacing=12),
+                    padding=ft.padding.symmetric(horizontal=16, vertical=16),
+                    bgcolor="#f8fafc",
+                    border_radius=12,
+                    border=ft.border.all(1, "#e1e7ef")
+                )
+            ], spacing=8)
         )
         
         self.payment_field = self._create_modern_text_field(
@@ -161,7 +180,7 @@ class StudentEditView:
                 ),
                 ft.Container(width=16), 
                 ft.Container(
-                    content=self.group_field,
+                    content=group_display,
                     expand=1
                 )
             ]),
@@ -176,7 +195,7 @@ class StudentEditView:
                     expand=1
                 )
             ]),
-            ft.Row([  # ✅ הצ'קבוקס כאן
+            ft.Row([
                 ft.Container(
                     content=self.has_sister_checkbox,
                     expand=True
@@ -339,7 +358,6 @@ class StudentEditView:
         form_data = {
             "name": self.name_field.value.strip() if self.name_field.value else "",
             "phone": self.phone_field.value.strip() if self.phone_field.value else "",
-            "group": self.group_field.value.strip() if self.group_field.value else "",
             "payment_status": self.payment_field.value.strip() if self.payment_field.value else "",
             "join_date": self.join_date_field.value.strip() if self.join_date_field.value else ""
         }
@@ -372,14 +390,17 @@ class StudentEditView:
             "id": self.student.get('id', ''),
             "name": form_data["name"],
             "phone": form_data["phone"],
-            "group": form_data["group"],
+            "groups": self.student.get('groups', []),
             "payment_status": form_data["payment_status"],
             "join_date": date_result,  
             "payments": self.student.get('payments', []),
             "has_sister": self.has_sister_checkbox.value
         }
         
-        success = self.parent.data_manager.update_student(self.student['name'], new_data)
+        success = self.parent.data_manager.update_student(
+            self.student['id'], 
+            new_data
+        )
         
         self._set_loading_state(False)
         
@@ -411,7 +432,7 @@ class StudentEditView:
 
     def _clear_field_errors(self):
         """Clear all field errors"""
-        fields = [self.name_field, self.phone_field, self.group_field, 
+        fields = [self.name_field, self.phone_field, 
                  self.payment_field, self.join_date_field]
         
         for field in fields:

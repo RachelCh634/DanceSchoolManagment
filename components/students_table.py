@@ -69,7 +69,7 @@ class StudentsTable:
 
     def create_row(self, student: Dict[str, Any], index: int) -> ft.Container:
         """Create a table row for a student"""
-        row_color = ft.Colors.with_opacity(0.3, ft.Colors.BLUE_GREY_50) if index % 2 == 0 else ft.Colors.WHITE
+        row_color =  ft.Colors.WHITE
 
         # Payment status styling
         payment_status = student.get("payment_status", "")
@@ -122,7 +122,7 @@ class StudentsTable:
                 ft.Container(
                     content=ft.Container(
                         content=ft.Text(
-                            student.get("group", ""),
+                            ", ".join(student.get("groups", [])),
                             size=13,
                             weight=ft.FontWeight.W_500,
                             text_align=ft.TextAlign.CENTER,

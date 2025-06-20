@@ -95,7 +95,7 @@ class AddStudentPage:
         if not self.validate_form(form_data):
             return
 
-        if self.data_manager.student_exists(form_data["id"]):
+        if self.data_manager.student_exists_in_this_group(form_data["id"], form_data["group"]):
             self.dialog.show_error(f"תלמידה עם ת.ז. {form_data['id']} כבר קיימת במערכת")
             return
 

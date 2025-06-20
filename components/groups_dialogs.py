@@ -1,5 +1,6 @@
 import flet as ft
 import json
+import os
 
 class GroupDialogs:
     @staticmethod
@@ -169,18 +170,19 @@ class GroupDialogs:
 
         def save_changes(e):
             try:
-                # Read current data
                 with open("data/groups.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
                 
-                # Find and update the group
                 groups = data.get("groups", [])
+                old_group_name = None
+                new_group_name = name_field.value.strip() if name_field.value.strip() else "לא צוין"
+                
                 for i, g in enumerate(groups):
                     if g.get("id") == group.get("id") or g.get("name") == group.get("name"):
-                        # Keep existing ID and students
+                        old_group_name = g.get("name")
                         updated_group = {
                             "id": g.get("id", group.get("id")),
-                            "name": name_field.value.strip() if name_field.value.strip() else "לא צוין",
+                            "name": new_group_name,
                             "teacher": teacher_field.value.strip() if teacher_field.value.strip() else "לא צוין",
                             "age_group": age_group_field.value.strip() if age_group_field.value.strip() else "לא צוין",
                             "price": price_field.value.strip() if price_field.value.strip() else "0",
@@ -189,28 +191,51 @@ class GroupDialogs:
                             "day_of_week": day_of_week_dropdown.value if day_of_week_dropdown.value else "לא צוין",
                             "teacher_phone": phone_field.value.strip() if phone_field.value.strip() else "לא צוין",
                             "teacher_email": email_field.value.strip() if email_field.value.strip() else "לא צוין",
-                            "students": g.get("students", [])  # Keep existing students
+                            "students": g.get("students", []) 
                         }
                         groups[i] = updated_group
                         break
                 
-                # Save updated data
                 with open("data/groups.json", "w", encoding="utf-8") as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
                 
-                # Close dialog and refresh
-                page.close(edit_dialog)
+                if old_group_name and old_group_name != new_group_name:
+                    try:
+                        if os.path.exists("data/students.json"):
+                            with open("data/students.json", "r", encoding="utf-8") as f:
+                                students_data = json.load(f)
+                            
+                            students_updated = False
+                            for student in students_data.get("students", []):
+                                student_groups = student.get("groups", [])
+                                
+                                if isinstance(student_groups, list):
+                                    for j, group_name in enumerate(student_groups):
+                                        if group_name.strip() == old_group_name.strip():
+                                            student_groups[j] = new_group_name
+                                            students_updated = True
+                                elif isinstance(student_groups, str):
+                                    if student_groups.strip() == old_group_name.strip():
+                                        student["groups"] = new_group_name
+                                        students_updated = True
+                            
+                            if students_updated:
+                                with open("data/students.json", "w", encoding="utf-8") as f:
+                                    json.dump(students_data, f, ensure_ascii=False, indent=2)
+                            
+                    except Exception as students_ex:
+                        print(f"⚠️ Error in update: {str(students_ex)}")
                 
-                # Show success message
+                page.close(edit_dialog)
                 on_success_callback("הקבוצה עודכנה בהצלחה")
                 
             except Exception as ex:
                 on_success_callback(f"שגיאה בעדכון הקבוצה: {str(ex)}", is_error=True)
 
+
         def cancel_edit(e):
             page.close(edit_dialog)
 
-        # Create the dialog with modern RTL styling
         edit_dialog = ft.AlertDialog(
             modal=True,
             title=ft.Container(
@@ -249,10 +274,8 @@ class GroupDialogs:
             ),
             content=ft.Container(
                 content=ft.Column([
-                    # Form sections with modern cards
                     ft.Container(
                         content=ft.Column([
-                            # Section header
                             ft.Row([
                                 ft.Container(
                                     content=ft.Icon(ft.Icons.INFO_OUTLINE, color="#3b82f6", size=18),

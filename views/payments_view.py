@@ -2,7 +2,8 @@ import flet as ft
 from components.modern_card import ModernCard
 from components.clean_button import CleanButton
 from components.modern_dialog import ModernDialog
-
+import os
+import json
 
 class PaymentsView:
     """View for managing student payments"""
@@ -10,11 +11,39 @@ class PaymentsView:
     def __init__(self, parent, student):
         self.parent = parent
         self.page = parent.page
-        self.student = student
+        self.student_id = student.get('id') 
+        self.student = None  
         self.dialog = ModernDialog(self.page)
+        self.load_student_data()
+
+    def load_student_data(self):
+            """Load fresh student data from file"""
+            try:
+                if os.path.exists("data/students.json"):
+                    with open("data/students.json", "r", encoding="utf-8") as f:
+                        students_data = json.load(f)
+                        
+                    for student in students_data.get("students", []):
+                        if student.get("id") == self.student_id:
+                            self.student = student
+                            break
+                    
+                    if not self.student:
+                        self.student = {"id": self.student_id, "name": "תלמיד לא נמצא", "payments": []}
+                else:
+                    self.student = {"id": self.student_id, "name": "קובץ לא נמצא", "payments": []}
+                    
+            except Exception as e:
+                self.student = {"id": self.student_id, "name": "שגיאה בטעינה", "payments": []}
+
+    def refresh_student_data(self):
+        """Refresh student data from file"""
+        self.load_student_data()
 
     def render(self):
         """Render payments view"""
+        self.refresh_student_data()
+        
         self.parent.clear_layout()
         
         header = self._create_header()
@@ -25,7 +54,7 @@ class PaymentsView:
         if not payments:
             self._render_empty_state()
         else:
-            self._render_payments_list(payments)
+            self._render_payments_list()
         
         actions = self._create_actions()
         self.parent.layout.controls.append(actions)
@@ -54,6 +83,11 @@ class PaymentsView:
 
     def _render_empty_state(self):
         """Render empty state"""
+        payments = self.student.get('payments', [])
+        
+        if payments:
+            self._render_payments_list()
+        
         empty_state = ft.Container(
             content=ft.Column([
                 ft.Icon(ft.Icons.RECEIPT_LONG_OUTLINED, size=48, color=ft.Colors.GREY_400),
@@ -69,8 +103,9 @@ class PaymentsView:
         )
         self.parent.layout.controls.append(empty_state)
 
-    def _render_payments_list(self, payments):
+    def _render_payments_list(self):
         """Render payments list"""
+        payments = self.student.get('payments', [])
         total_paid = sum(
             float(p['amount']) for p in payments
             if p['amount'].replace('.', '', 1).isdigit()
@@ -87,7 +122,6 @@ class PaymentsView:
         )
         self.parent.layout.controls.append(summary)
         
-        # Payments list
         payments_list = ft.Column(spacing=8)
         
         for payment in payments:

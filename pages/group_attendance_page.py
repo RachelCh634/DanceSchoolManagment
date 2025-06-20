@@ -71,7 +71,7 @@ class GroupAttendancePage:
         
         self.load_attendance()
         self.load_students()
-
+        
     def load_attendance(self):
         """Load attendance data from JSON file"""
         path = f"attendances/attendance_{self.group.get('id', '')}.json"
@@ -91,14 +91,25 @@ class GroupAttendancePage:
             if os.path.exists("data/students.json"):
                 with open("data/students.json", "r", encoding="utf-8") as f:
                     students_data = json.load(f)
+                    self.students = []  
+                    
                     for s in students_data.get("students", []):
-                        if s.get("group", "").strip() == self.group.get("name", "").strip():
-                            self.students.append({"id": s["id"], "name": s["name"]})
+                        student_groups = s.get("groups", [])
+                        group_name = self.group.get("name", "").strip()
+                        
+                        if isinstance(student_groups, list):
+                            if group_name in [g.strip() for g in student_groups]:
+                                self.students.append({"id": s["id"], "name": s["name"]})
+                        else:
+                            if student_groups.strip() == group_name:
+                                self.students.append({"id": s["id"], "name": s["name"]})
+                                
         except Exception as e:
             print(f"Error loading students: {e}")
+            self.students = []
 
     def load_data(self):
-        """Load attendance and student data"""
+        """Load attendance and student data - FIXED VERSION"""
         self.attendance_data = AttendanceUtils.load_attendance_file(self.group.get('id', ''))
         
         try:
@@ -106,11 +117,21 @@ class GroupAttendancePage:
                 with open("data/students.json", "r", encoding="utf-8") as f:
                     students_data = json.load(f)
                     self.students = []
+                    
                     for s in students_data.get("students", []):
-                        if s.get("group", "").strip() == self.group.get("name", "").strip():
-                            self.students.append({"id": s["id"], "name": s["name"]})
+                        student_groups = s.get("groups", [])
+                        group_name = self.group.get("name", "").strip()
+                        
+                        if isinstance(student_groups, list):
+                            if group_name in [g.strip() for g in student_groups]:
+                                self.students.append({"id": s["id"], "name": s["name"]})
+                        else:
+                            if student_groups.strip() == group_name:
+                                self.students.append({"id": s["id"], "name": s["name"]})
+                                
         except Exception as e:
-            print(f"Error loading students: {e}")
+            print(f"Error loading students in load_data: {e}")
+            self.students = []
 
     def save_attendance(self):
         """Save attendance data to JSON file"""
@@ -380,9 +401,6 @@ class GroupAttendancePage:
                         student_attendance[student_id] = not student_attendance[student_id]
                         is_present = student_attendance[student_id]
                         
-                        print(f"Clicked student {student_id}, new status: {is_present}")
-                        
-                        # ✅ עדכון גם האייקון וגם הרקע וגם הצבע
                         if is_present:
                             e.control.icon = ft.Icons.CHECK_CIRCLE  # ✅ שינוי האייקון
                             e.control.icon_color = ft.Colors.GREEN_600  # ✅ שינוי צבע האייקון

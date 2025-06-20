@@ -27,7 +27,8 @@ class AttendanceTableView:
                     students_data = json.load(f)
                     self.students = []
                     for s in students_data.get("students", []):
-                        if s.get("group", "").strip() == self.group.get("name", "").strip():
+                        student_groups = s.get("groups", [])
+                        if self.group.get("name", "").strip() in student_groups:
                             self.students.append({"id": s["id"], "name": s["name"]})
         except Exception as e:
             print(f"Error loading students: {e}")
@@ -329,7 +330,6 @@ class AttendanceTableView:
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
         )
 
-        # ✅ הוספת קונטיינר הודעת שגיאה ברור
         error_message = ft.Container(
             content=ft.Row([
                 ft.Icon(ft.Icons.ERROR_OUTLINE, size=16, color=ft.Colors.RED_500),
@@ -347,11 +347,10 @@ class AttendanceTableView:
 
         def show_error(message):
             """Show error message in dialog"""
-            error_message.content.controls[2].value = message  # הטקסט הוא האלמנט השלישי
+            error_message.content.controls[2].value = message  
             error_message.visible = True
             error_message.update()
             
-            # הדגשת שדה הקלט כשגיאה
             date_input.border_color = ft.Colors.RED_400
             date_input.focused_border_color = ft.Colors.RED_400
             date_input.update()
@@ -361,7 +360,6 @@ class AttendanceTableView:
             error_message.visible = False
             error_message.update()
             
-            # החזרת שדה הקלט למצב רגיל
             date_input.border_color = ft.Colors.GREY_200
             date_input.focused_border_color = ft.Colors.BLUE_400
             date_input.update()
@@ -371,14 +369,12 @@ class AttendanceTableView:
             if error_message.visible:
                 hide_error()
 
-        # ✅ הוספת מאזין לשינויים בשדה הקלט
         date_input.on_change = on_input_change
 
         def on_confirm(e):
             try:
                 new_date = date_input.value.strip() if date_input.value else ""
                 
-                # ✅ בדיקות מפורטות עם הודעות שגיאה ברורות
                 if not new_date:
                     show_error("אנא הכנס תאריך!")
                     return
@@ -395,16 +391,12 @@ class AttendanceTableView:
                     show_error("התאריך זהה לתאריך הנוכחי!")
                     return
                 
-                # אם הגענו לכאן - הכל תקין
-                # עדכון הנתונים
                 self.attendance_data[new_date] = self.attendance_data.pop(current_date)
                 self.save_attendance()
                 self.page.close(dlg)
                 
-                # עדכון מיידי של הטבלה
                 self.update_table_instantly()
                 
-                # הודעת הצלחה
                 self.show_success_snackbar(f"התאריך עודכן מ-{current_date} ל-{new_date}")
                         
             except Exception as ex:

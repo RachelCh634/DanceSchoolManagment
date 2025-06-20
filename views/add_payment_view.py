@@ -14,7 +14,6 @@ class AddPaymentView:
         self.student = student
         self.dialog = ModernDialog(self.page)
         
-        # Form state (React-like state management)
         self.form_state = {
             'amount': '',
             'date': '',
@@ -22,7 +21,6 @@ class AddPaymentView:
             'check_number': ''
         }
         
-        # Form fields
         self.amount_input = None
         self.date_input = None
         self.payment_method_dropdown = None
@@ -129,7 +127,7 @@ class AddPaymentView:
                 hint="dd/mm/yyyy",
                 icon=ft.Icons.CALENDAR_TODAY_OUTLINED,
                 key='date',
-                value=datetime.now().strftime("%d/%m/%Y")  # Default to today
+                value=datetime.now().strftime("%d/%m/%Y") 
             ),
             'payment_method': self._create_payment_method_dropdown(),
             'check_number': self._create_check_number_field()
@@ -217,7 +215,6 @@ class AddPaymentView:
         payment_method = e.control.value
         self.form_state['payment_method'] = payment_method
         
-        # Show check number field only when "צ'ק" is selected
         if payment_method == "צ'ק":
             self.check_number_input.visible = True
         else:
@@ -302,7 +299,6 @@ class AddPaymentView:
         """Validate form data"""
         errors = []
         
-        # Validate amount
         if not self.form_state['amount'].strip():
             errors.append("יש להזין סכום")
         else:
@@ -313,15 +309,12 @@ class AddPaymentView:
             except ValueError:
                 errors.append("יש להזין סכום תקין (מספר בלבד)")
         
-        # Validate date
         if not self.form_state['date'].strip():
             errors.append("יש להזין תאריך")
         
-        # Validate payment method
         if not self.form_state['payment_method']:
             errors.append("יש לבחור אופן תשלום")
         
-        # Validate check number if payment method is check
         if self.form_state['payment_method'] == "צ'ק" and not self.form_state['check_number'].strip():
             errors.append("יש להזין מספר צ'ק")
         
@@ -329,32 +322,27 @@ class AddPaymentView:
 
     def _save_payment(self, e):
         """Save new payment with validation"""
-        # Update form state from current field values
         self.form_state['amount'] = self.amount_input.value.strip() if self.amount_input.value else ""
         self.form_state['date'] = self.date_input.value.strip() if self.date_input.value else ""
         self.form_state['payment_method'] = self.payment_method_dropdown.value if self.payment_method_dropdown.value else ""
         if self.check_number_input.visible:
             self.form_state['check_number'] = self.check_number_input.value.strip() if self.check_number_input.value else ""
         
-        # Validate form
         errors = self._validate_form()
         if errors:
             self.dialog.show_error("\n".join(errors))
             return
 
-        # Prepare payment data
         payment_data = {
             "amount": self.form_state['amount'],
             "date": self.form_state['date'],
             "payment_method": self.form_state['payment_method']
         }
         
-        # Add check number if applicable
         if self.form_state['payment_method'] == "צ'ק" and self.form_state['check_number']:
             payment_data["check_number"] = self.form_state['check_number']
 
-        # Save payment
-        success = self.parent.data_manager.add_payment(self.student['name'], payment_data)
+        success = self.parent.data_manager.add_payment(self.student['id'],  payment_data)
         
         if success:
             self.dialog.show_success(
@@ -363,6 +351,8 @@ class AddPaymentView:
             )
         else:
             self.dialog.show_error("שגיאה בשמירת התשלום")
+
+
 
     def _create_date_picker_button(self):
         """Create date picker button for better UX"""

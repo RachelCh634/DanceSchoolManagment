@@ -20,7 +20,7 @@ class PaymentPage:
                     
                     for student in data.get("students", []):
                         student_name = student.get("name", "")
-                        group_name = student.get("group", "")
+                        student_groups = student.get("groups", [])
                         
                         for payment in student.get("payments", []):
                             payment_data = {
@@ -28,7 +28,8 @@ class PaymentPage:
                                 "amount": payment.get("amount", "0"),
                                 "date": payment.get("date", ""),
                                 "payment_method": payment.get("payment_method", ""),
-                                "group": group_name
+                                "groups": student_groups,
+                                "groups_display": ", ".join(student_groups)
                             }
                             
                             if payment.get("check_number"):
@@ -183,7 +184,7 @@ class PaymentPage:
 
     def create_table_row(self, payment: Dict[str, Any], index: int):
         """Create a modern table row for a payment"""
-        row_color = ft.Colors.with_opacity(0.3, ft.Colors.BLUE_GREY_50) if index % 2 == 0 else ft.Colors.WHITE
+        row_color = ft.Colors.WHITE
         
         # Payment method styling
         payment_method = payment["payment_method"]
@@ -274,7 +275,7 @@ class PaymentPage:
                 ft.Container(
                     content=ft.Container(
                         content=ft.Text(
-                            payment["group"], 
+                            payment.get("groups_display", ""), 
                             size=13, 
                             weight=ft.FontWeight.W_500,
                             text_align=ft.TextAlign.CENTER,
