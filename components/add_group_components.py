@@ -190,7 +190,7 @@ class AddGroupComponents:
 
     @staticmethod
     def show_error_dialog(page, message, title="שגיאה"):
-        """Show error dialog - IMPROVED VERSION"""
+        """Show error dialog - COMPACT VERSION"""
         
         def close_error_dialog():
             dialog.open = False
@@ -202,36 +202,26 @@ class AddGroupComponents:
                 content=ft.Row([
                     ft.Icon(ft.Icons.ERROR_OUTLINE, color="#ef4444", size=32),
                     ft.Text(title, size=22, weight=ft.FontWeight.BOLD, color="#ef4444")
-                ], spacing=15, alignment=ft.MainAxisAlignment.CENTER),
-                padding=ft.padding.only(bottom=10)
+                ], spacing=15, alignment=ft.MainAxisAlignment.CENTER)
             ),
-            content=ft.Container(
-                content=ft.Text(
-                    message, 
-                    size=16, 
-                    color="#64748b", 
-                    text_align=ft.TextAlign.CENTER,
-                    weight=ft.FontWeight.W_400
-                ),
-                width=320,
-                padding=ft.padding.symmetric(horizontal=20, vertical=15),
-                alignment=ft.alignment.center
+            content=ft.Text(
+                message, 
+                size=16, 
+                color="#64748b", 
+                text_align=ft.TextAlign.CENTER,
+                weight=ft.FontWeight.W_400
             ),
             actions=[
-                ft.Container(
-                    content=ft.ElevatedButton(
-                        "הבנתי",
-                        on_click=lambda e: close_error_dialog(),
-                        style=ft.ButtonStyle(
-                            bgcolor="#ef4444",
-                            color="white",
-                            text_style=ft.TextStyle(weight=ft.FontWeight.BOLD, size=16),
-                            shape=ft.RoundedRectangleBorder(radius=12),
-                            padding=ft.padding.symmetric(horizontal=30, vertical=12)
-                        )
-                    ),
-                    alignment=ft.alignment.center,
-                    padding=ft.padding.all(10)
+                ft.ElevatedButton(
+                    "הבנתי",
+                    on_click=lambda e: close_error_dialog(),
+                    style=ft.ButtonStyle(
+                        bgcolor="#ef4444",
+                        color="white",
+                        text_style=ft.TextStyle(weight=ft.FontWeight.BOLD, size=16),
+                        shape=ft.RoundedRectangleBorder(radius=12),
+                        padding=ft.padding.symmetric(horizontal=30, vertical=10)
+                    )
                 )
             ],
             actions_alignment=ft.MainAxisAlignment.CENTER,

@@ -56,7 +56,7 @@ class GroupDialogs:
         )
         
         price_field = ft.TextField(
-            label="מחיר",
+            label="מחיר לחודש",
             value=str(group.get("price", "")),
             border_color="#e1e7ef",
             focused_border_color="#3b82f6",
@@ -106,6 +106,25 @@ class GroupDialogs:
             content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
             cursor_color="#3b82f6"
         )
+
+        end_date_field = ft.TextField(
+            label="תאריך סיום",
+            value=group.get("group_end_date", ""),
+            border_color="#e1e7ef",
+            focused_border_color="#3b82f6",
+            hint_text="dd/mm/yyyy",
+            text_align=ft.TextAlign.RIGHT,
+            rtl=True,
+            label_style=ft.TextStyle(color="#64748b", size=14, weight=ft.FontWeight.W_500),
+            text_style=ft.TextStyle(color="#0f172a", size=16),
+            hint_style=ft.TextStyle(color="#94a3b8", size=14),
+            border_radius=12,
+            filled=True,
+            fill_color="#fafbfc",
+            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            cursor_color="#3b82f6"
+        )
+
         
         day_of_week_dropdown = ft.Dropdown(
             label="יום בשבוע",
@@ -168,14 +187,57 @@ class GroupDialogs:
             cursor_color="#3b82f6"
         )
 
+        error_container = ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.ERROR_OUTLINE, color="#ef4444", size=20),
+                ft.Text("", color="#ef4444", size=14, weight=ft.FontWeight.BOLD)
+            ], spacing=8),
+            bgcolor=ft.Colors.with_opacity(0.1, "#ef4444"),
+            border_radius=8,
+            padding=ft.padding.all(12),
+            visible=False,
+            margin=ft.margin.only(bottom=16),
+            alignment=ft.alignment.center_right  
+        )
+
+        def check_group_name_exists(new_name, current_name):
+            """Check if group name already exists (excluding current group)"""
+            try:
+                with open("data/groups.json", "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                
+                existing_groups = data.get("groups", [])
+                return any(g.get('name', '').strip().lower() == new_name.lower() 
+                          for g in existing_groups 
+                          if g.get('name', '').strip().lower() != current_name.lower())
+            except Exception as e:
+                print(f"Error checking group name existence: {e}")
+                return False
+
+        def show_error_dialog(message):
+            """Show error message inside dialog"""
+            error_container.content.controls[1].value = message
+            error_container.visible = True
+            page.update()
+
         def save_changes(e):
             try:
+                # Hide any previous error
+                error_container.visible = False
+                
+                # בדיקת שם קבוצה כפול
+                new_group_name = name_field.value.strip() if name_field.value.strip() else "לא צוין"
+                current_group_name = group.get("name", "")
+                
+                if new_group_name != current_group_name and check_group_name_exists(new_group_name, current_group_name):
+                    show_error_dialog("קבוצה בשם זה כבר קיימת במערכת")
+                    return
+                
                 with open("data/groups.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
                 
                 groups = data.get("groups", [])
                 old_group_name = None
-                new_group_name = name_field.value.strip() if name_field.value.strip() else "לא צוין"
                 
                 for i, g in enumerate(groups):
                     if g.get("id") == group.get("id") or g.get("name") == group.get("name"):
@@ -188,6 +250,7 @@ class GroupDialogs:
                             "price": price_field.value.strip() if price_field.value.strip() else "0",
                             "location": location_field.value.strip() if location_field.value.strip() else "לא צוין",
                             "group_start_date": start_date_field.value.strip() if start_date_field.value.strip() else "לא צוין",
+                            "group_end_date": end_date_field.value.strip() if end_date_field.value.strip() else "לא צוין",
                             "day_of_week": day_of_week_dropdown.value if day_of_week_dropdown.value else "לא צוין",
                             "teacher_phone": phone_field.value.strip() if phone_field.value.strip() else "לא צוין",
                             "teacher_email": email_field.value.strip() if email_field.value.strip() else "לא צוין",
@@ -274,6 +337,7 @@ class GroupDialogs:
             ),
             content=ft.Container(
                 content=ft.Column([
+                    error_container,  
                     ft.Container(
                         content=ft.Column([
                             ft.Row([
@@ -361,16 +425,18 @@ class GroupDialogs:
                                 ),
                             ]),
                             
-                            ft.Container(
-                                content=ft.Container(
-                                    content=start_date_field,
-                                    width=None,
-                                    expand=False
+                            ft.ResponsiveRow([
+                                 ft.Container(
+                                    content=end_date_field,
+                                    col={"xs": 12, "md": 6},
+                                    padding=ft.padding.only(bottom=16, right=8)
                                 ),
-                                padding=ft.padding.symmetric(horizontal=8),
-                                alignment=ft.alignment.center
-                            ),
-
+                                ft.Container(
+                                    content=start_date_field,
+                                    col={"xs": 12, "md": 6},
+                                    padding=ft.padding.only(bottom=16, left=8)
+                                )
+                            ]),
 
                         ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END),
                         bgcolor="#ffffff",
@@ -503,6 +569,9 @@ class GroupDialogs:
             title_padding=ft.padding.all(24),
             actions_padding=ft.padding.only(left=24, right=24, bottom=24, top=0),
         )
+
+        # Hide error container initially
+        error_container.visible = False
 
         return edit_dialog
 

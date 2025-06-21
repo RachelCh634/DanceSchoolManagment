@@ -12,14 +12,14 @@ class AddGroupPage:
 
         self.form_state = {
             'name': '', 'location': '', 'price': '', 'age': '',
-            'teacher': '', 'start_date': '', 'day_of_week': '',
+            'teacher': '', 'start_date': '', 'end_date': '', 'day_of_week': '',
             'phone': '', 'email': '',
         }
 
         self.required_fields = {
-            'name': 'שם הקבוצה', 'location': 'מיקום', 'price': 'מחיר',
+            'name': 'שם הקבוצה', 'location': 'מיקום', 'price': 'מחיר לחודש',
             'age': 'קבוצת גיל', 'teacher': 'מורה/מדריך',
-            'start_date': 'תאריך התחלה', 'day_of_week': 'יום בשבוע'
+            'start_date': 'תאריך התחלה', 'end_date': 'תאריך סיום', 'day_of_week': 'יום בשבוע'
         }
 
         self.validation_errors = {}
@@ -38,7 +38,7 @@ class AddGroupPage:
                 'location', required=True, on_change=self._handle_field_change, on_blur=self._validate_field
             ),
             'price': AddGroupComponents.create_text_field(
-                "מחיר *", "מחיר לשיעור", ft.Icons.PAYMENTS_OUTLINED,
+                "מחיר לחודש *", "מחיר לחודש", ft.Icons.PAYMENTS_OUTLINED,
                 'price', suffix="₪", keyboard_type=ft.KeyboardType.NUMBER, required=True,
                 on_change=self._handle_field_change, on_blur=self._validate_field
             ),
@@ -53,6 +53,10 @@ class AddGroupPage:
             'start_date': AddGroupComponents.create_text_field(
                 "תאריך התחלה *", "dd/mm/yyyy", ft.Icons.DATE_RANGE_OUTLINED,
                 'start_date', required=True, on_change=self._handle_field_change, on_blur=self._validate_field
+            ),
+            'end_date': AddGroupComponents.create_text_field(
+                "תאריך סיום *", "dd/mm/yyyy", ft.Icons.EVENT_OUTLINED,
+                'end_date', required=True, on_change=self._handle_field_change, on_blur=self._validate_field
             ),
             'day_of_week': AddGroupComponents.create_text_field(
                 "יום בשבוע *", "לדוג' ראשון, שני, שלישי...", ft.Icons.CALENDAR_VIEW_WEEK,
@@ -79,6 +83,10 @@ class AddGroupPage:
         """Validate individual field"""
         error = AddGroupValidator.validate_field(key, value, self.required_fields)
         
+        if key == 'name' and not error and value and value.strip():
+            if self._check_group_name_exists(value.strip()):
+                error = "קבוצה בשם זה כבר קיימת במערכת"
+        
         if error:
             self.validation_errors[key] = error
         elif key in self.validation_errors:
@@ -86,6 +94,17 @@ class AddGroupPage:
         
         self._update_field_style(key)
         return error is None
+
+    def _check_group_name_exists(self, group_name):
+        """Check if group name already exists"""
+        try:
+            groups_data = self.data_manager.load_groups()
+            existing_groups = groups_data.get("groups", [])
+            return any(group.get('name', '').strip().lower() == group_name.lower() 
+                      for group in existing_groups)
+        except Exception as e:
+            print(f"Error checking group name existence: {e}")
+            return False
 
     def _update_field_style(self, key):
         """Update field style based on validation state"""
@@ -232,9 +251,16 @@ class AddGroupPage:
                     padding=ft.padding.only(bottom=20, right=12)
                 ),
                 ft.Container(
-                    content=self.form_fields['day_of_week'],
+                    content=self.form_fields['end_date'],
                     col={"xs": 12, "sm": 12, "md": 6},
                     padding=ft.padding.only(bottom=20, left=12)
+                ),
+            ]),
+            ft.ResponsiveRow([
+                ft.Container(
+                    content=self.form_fields['day_of_week'],
+                    col={"xs": 12, "sm": 12, "md": 12},
+                    padding=ft.padding.only(bottom=20, right=12, left=12) 
                 ),
             ]),
             ft.ResponsiveRow([
@@ -280,6 +306,14 @@ class AddGroupPage:
         for key, field in self.form_fields.items():
             self.form_state[key] = field.value or ""
         
+        # בדיקה נוספת לשם קבוצה לפני הוולידציה הכללית
+        group_name = self.form_state['name'].strip()
+        if group_name and self._check_group_name_exists(group_name):
+            self.validation_errors['name'] = "קבוצה בשם זה כבר קיימת במערכת"
+            self._update_field_style('name')
+            AddGroupComponents.show_error_dialog(self.page, "קבוצה בשם זה כבר קיימת במערכת")
+            return
+        
         # ולידציה
         if not self._validate_all_fields():
             AddGroupComponents.show_error_dialog(self.page, "יש לתקן את השגיאות בטופס")
@@ -299,6 +333,7 @@ class AddGroupPage:
             "age_group": self.form_state['age'].strip(),
             "teacher": self.form_state['teacher'].strip(),
             "group_start_date": self.form_state['start_date'].strip(),
+            "group_end_date": self.form_state['end_date'].strip(),
             "day_of_week": self.form_state['day_of_week'].strip(),
             "teacher_phone": self.form_state['phone'].strip(),
             "teacher_email": self.form_state['email'].strip(),

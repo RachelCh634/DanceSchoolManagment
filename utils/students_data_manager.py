@@ -148,6 +148,47 @@ class StudentsDataManager:
             for student in students
         )
     
+    def delete_student_attendance(self, student_id, group_name):
+        """Delete student attendance from group attendance file"""
+        try:
+            groups = self.load_groups()
+            group_id = None
+            
+            for group in groups:
+                if group.get("name") == group_name:
+                    group_id = group.get("id")
+                    break
+            
+            if not group_id:
+                print(f"Group '{group_name}' not found")
+                return False
+            
+            attendance_file = f"attendances/attendance_{group_id}.json"
+            
+            if not os.path.exists(attendance_file):
+                print(f"Attendance file {attendance_file} not found")
+                return True  
+            
+            with open(attendance_file, 'r', encoding="utf-8") as f:
+                attendance_data = json.load(f)
+            
+            updated = False
+            for date in attendance_data:
+                if student_id in attendance_data[date]:
+                    del attendance_data[date][student_id]
+                    updated = True
+            
+            if updated:
+                with open(attendance_file, 'w', encoding="utf-8") as f:
+                    json.dump(attendance_data, f, ensure_ascii=False, indent=2)
+                print(f"Deleted attendance for student {student_id} from group {group_name}")
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error deleting student attendance: {e}")
+            return False
+    
     def delete_student_from_group(self, student_id, group_name):
         """Delete a student from specific group or completely if it's the last group"""
         try:
@@ -164,6 +205,8 @@ class StudentsDataManager:
                     
                     if group_name in groups:
                         groups.remove(group_name)
+                        
+                        self.delete_student_attendance(student_id, group_name)
                         
                         if len(groups) == 0:
                             students.pop(i)

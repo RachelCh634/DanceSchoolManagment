@@ -30,16 +30,12 @@ class GroupsDataManager:
             existing_ids = []
             for group in data.get("groups", []):
                 group_id = group.get("id")
-                # רק מוסיף ID-ים שהם מספרים תקינים
                 if group_id is not None and isinstance(group_id, int):
                     existing_ids.append(group_id)
                 elif group_id is not None and str(group_id).isdigit():
                     existing_ids.append(int(group_id))
             
             new_id = max(existing_ids) + 1 if existing_ids else 1
-            print("existing_ids:", existing_ids)
-            print("new_id:", new_id)
-            print("group_data", group_data)
             
             # Create new group
             new_group = {
@@ -51,6 +47,7 @@ class GroupsDataManager:
                 "teacher": group_data["teacher"],
                 "students": [],
                 "group_start_date": group_data["group_start_date"],
+                "group_end_date": group_data["group_end_date"],  
                 "day_of_week": group_data["day_of_week"],
                 "teacher_phone": group_data["teacher_phone"],
                 "teacher_email": group_data["teacher_email"]
@@ -69,7 +66,7 @@ class GroupsDataManager:
 
     def validate_group_data(self, data):
         """Validate group data"""
-        required_fields = ["name", "location", "price", "age_group", "teacher", "group_start_date", "day_of_week"]
+        required_fields = ["name", "location", "price", "age_group", "teacher", "group_start_date", "group_end_date", "day_of_week"]
 
         for field in required_fields:
             value = data.get(field, None)
@@ -77,5 +74,6 @@ class GroupsDataManager:
                 return False, "נא למלא את כל השדות החובה"
             
         return True, ""
+
 
 

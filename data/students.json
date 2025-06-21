@@ -1,134 +1,41 @@
 {
-  "students": [
-    {
-      "id": "032784738",
-      "name": "תמרי לוי",
-      "phone": "0527144636",
-      "groups": [
-        "היפ הופ",
-        "פילאטיס מתחילות"
-      ],
-      "payment_status": "חוב",
-      "join_date": "20/06/2025",
-      "payments": [
+    "students": [
         {
-          "amount": "500",
-          "date": "20/06/2025",
-          "payment_method": "אשראי"
+            "id": "214901134",
+            "name": "רחלי חדד",
+            "phone": "0583202634",
+            "payment_status": "חוב",
+            "join_date": "21/06/2025",
+            "has_sister": false,
+            "payments": [],
+            "groups": [
+                "היפ הופ"
+            ]
         },
         {
-          "amount": "150",
-          "date": "20/06/2025",
-          "payment_method": "אשראי"
+            "id": "032784738",
+            "name": "תמר לוי",
+            "phone": "0527144636",
+            "payment_status": "חוב",
+            "join_date": "21/06/2025",
+            "has_sister": false,
+            "payments": [],
+            "groups": [
+                "היפ הופ",
+                "בלט מתחילות"
+            ]
         },
         {
-          "amount": "120",
-          "date": "20/06/2025",
-          "payment_method": "צ'ק",
-          "check_number": "14522"
+            "id": "326139433",
+            "name": "אהובה מילר",
+            "phone": "0533197307",
+            "payment_status": "חוב",
+            "join_date": "21/06/2025",
+            "has_sister": false,
+            "payments": [],
+            "groups": [
+                "בלט מתחילות"
+            ]
         }
-      ],
-      "has_sister": false
-    },
-    {
-      "id": "214901134",
-      "name": "רחלי חדד",
-      "phone": "0583202634",
-      "groups": [
-        "פילאטיס מתחילות",
-        "היפ הופ"
-      ],
-      "payment_status": "חוב",
-      "join_date": "20/06/2025",
-      "payments": [
-        {
-          "amount": "1000",
-          "date": "20/06/2025",
-          "payment_method": "העברה בנקאית"
-        },
-        {
-          "amount": "300",
-          "date": "20/06/2025",
-          "payment_method": "אשראי"
-        }
-      ],
-      "has_sister": false
-    },
-    {
-      "id": "032781486",
-      "name": "חיה ויספיש",
-      "phone": "0533169852",
-      "payment_status": "חוב",
-      "join_date": "20/06/2025",
-      "has_sister": false,
-      "payments": [
-        {
-          "amount": "150",
-          "date": "20/06/2025",
-          "payment_method": "מזומן"
-        },
-        {
-          "amount": "100",
-          "date": "20/06/2025",
-          "payment_method": "מזומן"
-        },
-        {
-          "amount": "100",
-          "date": "20/06/2025",
-          "payment_method": "אשראי"
-        }
-      ],
-      "groups": [
-        "פילאטיס מתחילות"
-      ]
-    },
-    {
-      "id": "326139433",
-      "name": "אהובי קרפ",
-      "phone": "0533197307",
-      "groups": [
-        "היפ הופ"
-      ],
-      "payment_status": "חוב",
-      "join_date": "20/06/2025",
-      "payments": [
-        {
-          "amount": "250",
-          "date": "20/06/2025",
-          "payment_method": "צ'ק",
-          "check_number": "12563"
-        },
-        {
-          "amount": "100",
-          "date": "20/06/2025",
-          "payment_method": "מזומן"
-        }
-      ],
-      "has_sister": true
-    },
-    {
-      "id": "214879965",
-      "name": "ציפי סימן טוב",
-      "phone": "0533145245",
-      "payment_status": "שולם",
-      "join_date": "20/06/2025",
-      "has_sister": false,
-      "payments": [
-        {
-          "amount": "1000",
-          "date": "20/06/2025",
-          "payment_method": "צ'ק",
-          "check_number": "12536"
-        },
-        {
-          "amount": "200",
-          "date": "20/06/2025",
-          "payment_method": "מזומן"
-        }
-      ],
-      "groups": [
-        "היפ הופ"
-      ]
-    }
-  ]
+    ]
 }
