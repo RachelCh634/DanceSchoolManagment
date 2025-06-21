@@ -22,7 +22,7 @@
       "price": "180",
       "location": "מודיעין",
       "group_start_date": "01/05/2025",
-      "group_end_date": "לא צוין",
+      "group_end_date": "31/08/2025",
       "day_of_week": "שלישי",
       "teacher_phone": "0527166852",
       "teacher_email": "לא צוין",
@@ -37,10 +37,24 @@
       "teacher": "שפרה שינקר",
       "students": [],
       "group_start_date": "01/07/2025",
-      "group_end_date": "30/02/2026",
+      "group_end_date": "30/10/2025",
       "day_of_week": "ראשון",
       "teacher_phone": "0583256363",
       "teacher_email": ""
+    },
+    {
+      "id": 5,
+      "name": "חיטוב הגוף",
+      "location": "ירושלים",
+      "price": 100,
+      "age_group": "א-ג",
+      "teacher": "רבקה",
+      "students": [],
+      "group_start_date": "10/03/2025",
+      "group_end_date": "30/06/2025",
+      "day_of_week": "שלישי",
+      "teacher_phone": "0547685326",
+      "teacher_email": "Rivka@gmail.com"
     }
   ]
 }
