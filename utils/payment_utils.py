@@ -26,6 +26,14 @@ class PaymentCalculator:
                 return group
         return None
     
+    def get_group_id_by_name(self, group_name):
+        """Get group ID by group name"""
+        groups = self.load_groups()
+        for group in groups:
+            if group.get("name") == group_name:
+                return group.get("id")
+        return None
+
     def get_end_of_month(self, date):
         """Get the last day of the month for given date"""
         if isinstance(date, str):
@@ -94,12 +102,36 @@ class PaymentCalculator:
             return 0
     
     def calculate_months_between_dates(self, start_date, end_date):
-        """Calculate number of months between two dates"""
+        """
+        Calculate number of months between two dates
+        FIXED: If end date is the 1st of the month, don't count that month
+        """
         try:
             if isinstance(start_date, str):
                 start_date = datetime.strptime(start_date, "%d/%m/%Y")
             if isinstance(end_date, str):
                 end_date = datetime.strptime(end_date, "%d/%m/%Y")
+            
+            if end_date.day == 1:
+                if end_date.month == 1:
+                    end_date = end_date.replace(year=end_date.year - 1, month=12, day=31)
+                else:
+                    # Go to last day of previous month
+                    previous_month = end_date.month - 1
+                    # Get last day of previous month
+                    if previous_month in [1, 3, 5, 7, 8, 10, 12]:
+                        last_day = 31
+                    elif previous_month in [4, 6, 9, 11]:
+                        last_day = 30
+                    else:  # February
+                        # Check for leap year
+                        year = end_date.year
+                        if (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0):
+                            last_day = 29
+                        else:
+                            last_day = 28
+                    
+                    end_date = end_date.replace(month=previous_month, day=last_day)
             
             # Calculate difference in months
             months_diff = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
@@ -113,6 +145,7 @@ class PaymentCalculator:
         except Exception as e:
             print(f"Error calculating months between dates: {e}")
             return 0
+
     
     def calculate_first_month_payment(self, monthly_price, meetings_attended):
         """
@@ -383,7 +416,6 @@ class PaymentCalculator:
             print(f"Error: {result.get('error', 'Unknown error')}")
             return 0
 
-    # Legacy method - for backward compatibility
     def calculate_payment(self, group_id, start_date, end_date=None):
         """
         Calculate payment for student based on course duration

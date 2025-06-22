@@ -243,8 +243,10 @@ class StudentsDataManager:
 
     def add_payment(self, student_id, payment_data):
         """Add payment to student and update payment status"""
+        from .payment_utils import PaymentCalculator 
+        
         students = self.get_all_students()
-        groups_data = self._get_groups()
+        payment_calculator = PaymentCalculator() 
         
         for student in students:
             if student['id'] == student_id:
@@ -256,12 +258,22 @@ class StudentsDataManager:
                 )
                 
                 student_groups = student.get("groups", [])
-                total_owed = 0
+                join_date = student.get("join_date", "")
                 
+                total_owed = 0
                 for group_name in student_groups:
-                    group = next((g for g in groups_data if g['name'] == group_name), None)
+                    groups = payment_calculator.load_groups()
+                    group = next((g for g in groups if g['name'] == group_name), None)
+                    
                     if group:
-                        total_owed += float(group.get("price", "0"))
+                        group_id = group.get("id")
+                        group_end_date = group.get("group_end_date", "")
+                        
+                        if group_id and group_end_date:
+                            group_payment = payment_calculator.get_payment_amount_for_period(
+                                group_id, join_date, group_end_date
+                            )
+                            total_owed += group_payment
                 
                 if total_owed > 0:
                     if total_paid >= total_owed:
@@ -273,6 +285,8 @@ class StudentsDataManager:
                 break
         
         return self.save_students(students)
+
+
 
     def _get_groups(self):
         """Get groups data for pricing"""

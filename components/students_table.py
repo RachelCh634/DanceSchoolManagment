@@ -1,12 +1,13 @@
 import flet as ft
 from typing import List, Dict, Any
-
+from utils.payment_utils import PaymentCalculator
 
 class StudentsTable:
     """Students table component"""
 
     def __init__(self):
         self.table_container = ft.Column(controls=[], spacing=0, scroll=ft.ScrollMode.AUTO)
+        self.payment_calculator = PaymentCalculator()
 
     def create_header(self) -> ft.Container:
         """Create table header row"""
@@ -73,14 +74,16 @@ class StudentsTable:
 
         # Payment status styling
         payment_status = student.get("payment_status", "")
-        payment_color, payment_bg, payment_icon = self._get_payment_style(payment_status)
+        amount = self.calculate_total_paid_advanced(student.get("payments", []))
+        payment_color, payment_bg, payment_icon, display_text = self._get_payment_style(
+            payment_status, amount, student.get('groups', []), student.get("join_date")
+        )
 
         cell_style = {
             "bgcolor": row_color,
             "padding": ft.padding.symmetric(horizontal=16, vertical=16),
             "alignment": ft.alignment.center,
         }
-
 
         has_sister = student.get("has_sister", False)
         sister_mark = "✔" if has_sister else "✘"
@@ -140,7 +143,7 @@ class StudentsTable:
                         content=ft.Row([
                             ft.Icon(payment_icon, size=16, color=payment_color),
                             ft.Text(
-                                payment_status,
+                                display_text,  
                                 size=13,
                                 weight=ft.FontWeight.W_500,
                                 color=payment_color,
@@ -162,7 +165,6 @@ class StudentsTable:
                     ),
                     expand=2, **cell_style
                 ),
-                # הוספת עמודת אחות בחוג
                 ft.Container(
                     content=ft.Text(
                         sister_mark,
@@ -178,14 +180,31 @@ class StudentsTable:
             border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.1, ft.Colors.GREY_400))),
         )
 
-    def _get_payment_style(self, payment_status: str):
+    def _get_payment_style(self, payment_status: str, amount, student_groups, join_date):
         """Get payment status styling"""
         if payment_status == "שולם":
-            return ft.Colors.GREEN_600, ft.Colors.with_opacity(0.1, ft.Colors.GREEN_600), ft.Icons.CHECK_CIRCLE
-        elif payment_status == "לא שולם" or payment_status == "ממתין":
-            return ft.Colors.ORANGE_600, ft.Colors.with_opacity(0.1, ft.Colors.ORANGE_600), ft.Icons.PENDING
+            return ft.Colors.GREEN_600, ft.Colors.with_opacity(0.1, ft.Colors.GREEN_600), ft.Icons.CHECK_CIRCLE, "שולם"
+        elif payment_status == "חוב":
+            total_owed_until_now = 0
+            for group_name in student_groups:
+                group_id = self.payment_calculator.get_group_id_by_name(group_name)
+                if group_id:
+                    group_payment = self.payment_calculator.get_payment_amount_until_now(group_id, join_date)
+                    group = self.payment_calculator.get_group_by_id(group_id)
+                    group_end_date = group.get("group_end_date", "") if group else ""
+                    all_group_payment = self.payment_calculator.get_payment_amount_for_period(group_id, join_date, group_end_date)
+                    total_owed_until_now += group_payment
+            
+            print(f"DEBUG: Payment for the entire course: {all_group_payment}, Amount to be paid so far: {total_owed_until_now}, Paid so far: {amount}")
+            
+            if amount >= total_owed_until_now:
+                return ft.Colors.ORANGE_600, ft.Colors.with_opacity(0.1, ft.Colors.ORANGE_600), ft.Icons.PENDING, "שולם עד כה"
+            else:
+                return ft.Colors.RED_600, ft.Colors.with_opacity(0.1, ft.Colors.RED_600), ft.Icons.ERROR, "חוב"
         else:
-            return ft.Colors.GREY_600, ft.Colors.with_opacity(0.1, ft.Colors.GREY_600), ft.Icons.HELP
+            return ft.Colors.GREY_600, ft.Colors.with_opacity(0.1, ft.Colors.GREY_600), ft.Icons.HELP, payment_status
+
+
 
     def update(self, students: List[Dict[str, Any]]):
         """Update table with students data"""
@@ -205,3 +224,26 @@ class StudentsTable:
             expand=True,
             clip_behavior=ft.ClipBehavior.HARD_EDGE
         )
+    
+
+    def calculate_total_paid_advanced(self, payments_array):
+        total_paid = 0.0
+        
+        if not payments_array or not isinstance(payments_array, list):
+            return 0.0
+        
+        for payment in payments_array:
+            if isinstance(payment, dict) and 'amount' in payment:
+                amount_str = payment.get('amount', '0')
+                
+                try:
+                    # Handle different formats: "100", "100.50", "100,50"
+                    clean_amount = str(amount_str).replace(',', '.')
+                    amount = float(clean_amount)
+                    total_paid += amount
+                except (ValueError, TypeError):
+                    # Skip invalid amounts
+                    continue
+        
+        return total_paid
+

@@ -1,11 +1,11 @@
 {
     "students": [
         {
-            "id": "214901134",
-            "name": "רחלי חדד",
-            "phone": "0583202634",
+            "id": "032784738",
+            "name": "תמר לוי",
+            "phone": "0527144636",
             "payment_status": "חוב",
-            "join_date": "21/06/2025",
+            "join_date": "01/03/2025",
             "has_sister": false,
             "payments": [],
             "groups": [
@@ -13,28 +13,39 @@
             ]
         },
         {
-            "id": "032784738",
-            "name": "תמר לוי",
-            "phone": "0527144636",
+            "id": "214901134",
+            "name": "רחלי חדד",
+            "phone": "0583202634",
             "payment_status": "חוב",
-            "join_date": "21/06/2025",
+            "join_date": "01/06/2025",
             "has_sister": false,
-            "payments": [],
+            "payments": [
+                {
+                    "amount": "180",
+                    "date": "22/06/2025",
+                    "payment_method": "מזומן"
+                }
+            ],
             "groups": [
-                "היפ הופ",
-                "בלט מתחילות"
+                "היפ הופ"
             ]
         },
         {
             "id": "326139433",
-            "name": "אהובה מילר",
+            "name": "הודיה לרנר",
             "phone": "0533197307",
-            "payment_status": "חוב",
-            "join_date": "21/06/2025",
+            "payment_status": "שולם",
+            "join_date": "10/04/2025",
             "has_sister": false,
-            "payments": [],
+            "payments": [
+                {
+                    "amount": "1620",
+                    "date": "22/06/2025",
+                    "payment_method": "אשראי"
+                }
+            ],
             "groups": [
-                "בלט מתחילות"
+                "היפ הופ"
             ]
         }
     ]

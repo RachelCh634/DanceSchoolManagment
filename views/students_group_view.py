@@ -125,6 +125,39 @@ class StudentsGroupView:
         else:
             return []
 
+    def _get_payment_display_status(self, student):
+        """Get payment status for display with 'paid until now' logic"""
+        from utils.payment_utils import PaymentCalculator
+        
+        payment_status = student.get('payment_status', '')
+        
+        if payment_status == "שולם":
+            return "שולם"
+        elif payment_status == "חוב":
+            payment_calculator = PaymentCalculator()
+            
+            payments = student.get('payments', [])
+            total_paid = sum(
+                float(p['amount']) for p in payments
+                if p['amount'].replace('.', '', 1).isdigit()
+            )
+            
+            student_groups = student.get('groups', [])
+            join_date = student.get('join_date', '')
+            total_owed_until_now = 0
+            
+            for group_name in student_groups:
+                group_id = payment_calculator.get_group_id_by_name(group_name)
+                if group_id:
+                    group_payment = payment_calculator.get_payment_amount_until_now(group_id, join_date)
+                    total_owed_until_now += group_payment
+            
+            if total_paid >= total_owed_until_now:
+                return "שולם עד כה"
+            else:
+                return "חוב"
+        else:
+            return payment_status
 
     def _create_student_card(self, student):
         """Create a student card"""
@@ -147,9 +180,9 @@ class StudentsGroupView:
             alignment=ft.alignment.center,
         )
         
-        # Payment status
-        payment_status = student.get('payment_status', '')
-        status_color = self._get_payment_status_color(payment_status)
+        # Payment status - השתמש בפונקציה החדשה
+        display_payment_status = self._get_payment_display_status(student)
+        status_color = self._get_payment_status_color(display_payment_status)
         
         status_dot = ft.Container(
             width=8,
@@ -191,7 +224,7 @@ class StudentsGroupView:
                     ft.Row([
                         status_dot,
                         ft.Text(
-                            payment_status,
+                            display_payment_status,  # השתמש בסטטוס המעודכן
                             size=12,
                             color=ft.Colors.GREY_600,
                             overflow=ft.TextOverflow.ELLIPSIS
@@ -290,6 +323,8 @@ class StudentsGroupView:
         """Get color for payment status"""
         if payment_status == "שולם":
             return ft.Colors.GREEN_600
+        elif payment_status == "שולם עד כה":
+            return ft.Colors.ORANGE_500
         elif "חוב" in payment_status:
             return ft.Colors.RED_500
         else:
