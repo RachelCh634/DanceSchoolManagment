@@ -16,19 +16,30 @@
             "id": "214901134",
             "name": "רחלי חדד",
             "phone": "0583202634",
+            "groups": [
+                "היפ הופ",
+                "בלט"
+            ],
             "payment_status": "חוב",
-            "join_date": "01/06/2025",
-            "has_sister": false,
+            "join_date": "15/05/2025",
             "payments": [
                 {
                     "amount": "180",
                     "date": "22/06/2025",
                     "payment_method": "מזומן"
+                },
+                {
+                    "amount": "240",
+                    "date": "22/06/2025",
+                    "payment_method": "ביט"
+                },
+                {
+                    "amount": "20",
+                    "date": "22/06/2025",
+                    "payment_method": "מזומן"
                 }
             ],
-            "groups": [
-                "היפ הופ"
-            ]
+            "has_sister": true
         },
         {
             "id": "326139433",

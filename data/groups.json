@@ -13,6 +13,20 @@
       "day_of_week": "ראשון",
       "teacher_phone": "0583206363",
       "teacher_email": ""
+    },
+    {
+      "id": 2,
+      "name": "בלט",
+      "location": "הר חומה",
+      "price": 180,
+      "age_group": "6-8",
+      "teacher": "רחלי לביא",
+      "students": [],
+      "group_start_date": "01/04/2025",
+      "group_end_date": "01/01/2026",
+      "day_of_week": "רביעי",
+      "teacher_phone": "0583256545",
+      "teacher_email": ""
     }
   ]
 }

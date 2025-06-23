@@ -137,20 +137,38 @@ class StudentsGroupView:
             payment_calculator = PaymentCalculator()
             
             payments = student.get('payments', [])
-            total_paid = sum(
-                float(p['amount']) for p in payments
-                if p['amount'].replace('.', '', 1).isdigit()
-            )
+            total_paid = 0
+            for payment in payments:
+                try:
+                    amount = payment.get('amount', 0)
+                    if isinstance(amount, str):
+                        amount = float(amount) if amount.strip() else 0
+                    elif isinstance(amount, (int, float)):
+                        amount = float(amount)
+                    else:
+                        amount = 0
+                    total_paid += amount
+                except (ValueError, AttributeError):
+                    continue
             
-            student_groups = student.get('groups', [])
             join_date = student.get('join_date', '')
-            total_owed_until_now = 0
+            student_id = student.get('id', '')
             
-            for group_name in student_groups:
-                group_id = payment_calculator.get_group_id_by_name(group_name)
-                if group_id:
-                    group_payment = payment_calculator.get_payment_amount_until_now(group_id, join_date)
-                    total_owed_until_now += group_payment
+            # שימוש בפונקציה החדשה לחישוב התשלום הנדרש עד כה
+            if student_id:
+                total_owed_until_now = payment_calculator.get_student_payment_amount_until_now(student_id, join_date)
+            else:
+                # fallback לשיטה הישנה אם אין student_id
+                student_groups = student.get('groups', [])
+                total_owed_until_now = 0
+                for group_name in student_groups:
+                    group_id = payment_calculator.get_group_id_by_name(group_name)
+                    if group_id:
+                        group_payment = payment_calculator.get_payment_amount_until_now(group_id, join_date)
+                        total_owed_until_now += group_payment
+            
+            print("total_paid", total_paid)
+            print("total_owed_until_now", total_owed_until_now)
             
             if total_paid >= total_owed_until_now:
                 return "שולם עד כה"
@@ -158,6 +176,7 @@ class StudentsGroupView:
                 return "חוב"
         else:
             return payment_status
+
 
     def _create_student_card(self, student):
         """Create a student card"""

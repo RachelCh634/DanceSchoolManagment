@@ -71,12 +71,12 @@ class StudentsTable:
     def create_row(self, student: Dict[str, Any], index: int) -> ft.Container:
         """Create a table row for a student"""
         row_color =  ft.Colors.WHITE
-
+        student_id = student.get("id") 
         # Payment status styling
         payment_status = student.get("payment_status", "")
         amount = self.calculate_total_paid_advanced(student.get("payments", []))
         payment_color, payment_bg, payment_icon, display_text = self._get_payment_style(
-            payment_status, amount, student.get('groups', []), student.get("join_date")
+            payment_status, amount, student.get('groups', []), student.get("join_date"), student_id
         )
 
         cell_style = {
@@ -180,22 +180,38 @@ class StudentsTable:
             border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.1, ft.Colors.GREY_400))),
         )
 
-    def _get_payment_style(self, payment_status: str, amount, student_groups, join_date):
+    def _get_payment_style(self, payment_status: str, amount, student_groups, join_date, student_id=None):
         """Get payment status styling"""
         if payment_status == "שולם":
             return ft.Colors.GREEN_600, ft.Colors.with_opacity(0.1, ft.Colors.GREEN_600), ft.Icons.CHECK_CIRCLE, "שולם"
         elif payment_status == "חוב":
-            total_owed_until_now = 0
-            for group_name in student_groups:
-                group_id = self.payment_calculator.get_group_id_by_name(group_name)
-                if group_id:
-                    group_payment = self.payment_calculator.get_payment_amount_until_now(group_id, join_date)
-                    group = self.payment_calculator.get_group_by_id(group_id)
-                    group_end_date = group.get("group_end_date", "") if group else ""
-                    all_group_payment = self.payment_calculator.get_payment_amount_for_period(group_id, join_date, group_end_date)
-                    total_owed_until_now += group_payment
+            if student_id:
+                total_owed_until_now = self.payment_calculator.get_student_payment_amount_until_now(student_id, join_date)
+                
+                latest_end_date = ""
+                for group_name in student_groups:
+                    group_id = self.payment_calculator.get_group_id_by_name(group_name)
+                    if group_id:
+                        group = self.payment_calculator.get_group_by_id(group_id)
+                        group_end_date = group.get("group_end_date", "") if group else ""
+                        if group_end_date > latest_end_date:
+                            latest_end_date = group_end_date
+                
+                all_course_payment = self.payment_calculator.get_student_payment_amount_for_period(student_id, join_date, latest_end_date)
+            else:
+                total_owed_until_now = 0
+                all_course_payment = 0
+                for group_name in student_groups:
+                    group_id = self.payment_calculator.get_group_id_by_name(group_name)
+                    if group_id:
+                        group_payment = self.payment_calculator.get_payment_amount_until_now(group_id, join_date)
+                        group = self.payment_calculator.get_group_by_id(group_id)
+                        group_end_date = group.get("group_end_date", "") if group else ""
+                        group_course_payment = self.payment_calculator.get_payment_amount_for_period(group_id, join_date, group_end_date)
+                        total_owed_until_now += group_payment
+                        all_course_payment += group_course_payment
             
-            print(f"DEBUG: Payment for the entire course: {all_group_payment}, Amount to be paid so far: {total_owed_until_now}, Paid so far: {amount}")
+            print(f"DEBUG: Payment for the entire course: {all_course_payment}, Amount to be paid so far: {total_owed_until_now}, Paid so far: {amount}")
             
             if amount >= total_owed_until_now:
                 return ft.Colors.ORANGE_600, ft.Colors.with_opacity(0.1, ft.Colors.ORANGE_600), ft.Icons.PENDING, "שולם עד כה"
@@ -203,8 +219,6 @@ class StudentsTable:
                 return ft.Colors.RED_600, ft.Colors.with_opacity(0.1, ft.Colors.RED_600), ft.Icons.ERROR, "חוב"
         else:
             return ft.Colors.GREY_600, ft.Colors.with_opacity(0.1, ft.Colors.GREY_600), ft.Icons.HELP, payment_status
-
-
 
     def update(self, students: List[Dict[str, Any]]):
         """Update table with students data"""

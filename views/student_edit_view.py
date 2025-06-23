@@ -4,6 +4,7 @@ from components.clean_button import CleanButton
 from components.modern_dialog import ModernDialog
 from utils.validation import ValidationUtils
 from utils.date_utils import DateUtils
+from utils.payment_utils import PaymentCalculator
 
 
 class StudentEditView:
@@ -101,6 +102,96 @@ class StudentEditView:
             border=ft.border.all(1, "#f1f5f9")
         )
 
+    def _get_payment_display_status(self):
+        """Get the display status for payment based on the logic from students_table.py"""
+        payment_status = self.student.get('payment_status', '')
+        student_groups = self.student.get('groups', [])
+        join_date = self.student.get('join_date', '')
+        student_id = self.student.get('id', '')
+        
+        payments = self.student.get('payments', [])
+        amount_paid = 0
+        for payment in payments:
+            try:
+                amount = payment.get('amount', 0)
+                if isinstance(amount, str):
+                    amount = float(amount) if amount.strip() else 0
+                elif isinstance(amount, (int, float)):
+                    amount = float(amount)
+                else:
+                    amount = 0
+                amount_paid += amount
+            except (ValueError, AttributeError):
+                continue
+        
+        print(f"DEBUG: Student {student_id}, Payment status: {payment_status}, Amount paid: {amount_paid}")
+        
+        if payment_status == "שולם":
+            return "שולם", ft.Colors.GREEN_600
+        elif payment_status == "חוב":
+            payment_calculator = PaymentCalculator()
+            
+            if payment_calculator:
+                try:
+                    if student_id:
+                        total_owed_until_now = payment_calculator.get_student_payment_amount_until_now(student_id, join_date)
+                        print(f"DEBUG: Total owed until now for student {student_id}: {total_owed_until_now}")
+                    else:
+                        total_owed_until_now = 0
+                        for group_name in student_groups:
+                            group_id = payment_calculator.get_group_id_by_name(group_name)
+                            if group_id:
+                                group_payment = payment_calculator.get_payment_amount_until_now(group_id, join_date)
+                                total_owed_until_now += group_payment
+                        print(f"DEBUG: Total owed until now (old method): {total_owed_until_now}")
+                    
+                    if isinstance(total_owed_until_now, str):
+                        total_owed_until_now = float(total_owed_until_now) if total_owed_until_now.strip() else 0
+                    
+                    if amount_paid >= total_owed_until_now:
+                        return "שולם עד כה"
+                    else:
+                        return "חוב"
+                        
+                except Exception as e:
+                    print(f"Error calculating payment status: {e}")
+                    return "חוב"
+            else:
+                print("DEBUG: Payment calculator not found, returning 'חוב'")
+                return "חוב"
+        else:
+            return payment_status, ft.Colors.GREY_600
+
+
+    def _create_payment_status_display(self):
+        """Create payment status display (read-only)"""
+        display_status = self._get_payment_display_status()
+        
+        return ft.Container(
+            content=ft.Column([
+                ft.Text(
+                    "סטטוס תשלום",
+                    size=14,
+                    weight=ft.FontWeight.W_500,
+                    color="#64748b"
+                ),
+                ft.Container(
+                    content=ft.Row([
+                        ft.Icon(ft.Icons.PAYMENT_OUTLINED, size=20, color="#64748b"),
+                        ft.Text(
+                            display_status,
+                            size=16,
+                            weight=ft.FontWeight.W_400,
+                        )
+                    ], spacing=12),
+                    padding=ft.padding.symmetric(horizontal=16, vertical=16),
+                    bgcolor="#f8fafc",
+                    border_radius=12,
+                    border=ft.border.all(1, "#e1e7ef")
+                )
+            ], spacing=8)
+        )
+
     def _create_form_grid(self):
         """Create form fields in a responsive grid layout"""
         self.name_field = self._create_modern_text_field(
@@ -116,6 +207,14 @@ class StudentEditView:
             icon=ft.Icons.PHONE_OUTLINED,
             hint="050-1234567",
             keyboard_type=ft.KeyboardType.PHONE
+        )
+        
+        self.join_date_field = self._create_modern_text_field(
+            label="תאריך הצטרפות",
+            value=self.student['join_date'],
+            icon=ft.Icons.CALENDAR_TODAY_OUTLINED,
+            hint="dd/mm/yyyy או dd-mm-yyyy או dd.mm.yyyy",
+            suffix="📅"
         )
         
         # Display group as read-only text instead of editable field
@@ -145,48 +244,27 @@ class StudentEditView:
             ], spacing=8)
         )
         
-        self.payment_field = self._create_modern_text_field(
-            label="סטטוס תשלום",
-            value=self.student['payment_status'],
-            icon=ft.Icons.PAYMENT_OUTLINED,
-            hint="שולם / לא שולם"
-        )
+        # Payment status display (read-only)
+        payment_status_display = self._create_payment_status_display()
         
-        self.join_date_field = self._create_modern_text_field(
-            label="תאריך הצטרפות",
-            value=self.student['join_date'],
-            icon=ft.Icons.CALENDAR_TODAY_OUTLINED,
-            hint="dd/mm/yyyy או dd-mm-yyyy או dd.mm.yyyy",
-            suffix="📅"
-        )
         self.has_sister_checkbox = ft.Checkbox(
             label="יש אחות נוספת בחוג",
             value=self.student.get('has_sister', False),
             fill_color=ft.Colors.GREEN_600
-
         )
         
         return ft.Column([
+            # שורה ראשונה: שם מלא
             ft.Row([
                 ft.Container(
                     content=self.name_field,
                     expand=True
                 )
             ]),
+            # שורה שנייה: טלפון ותאריך הצטרפות
             ft.Row([
                 ft.Container(
                     content=self.phone_field,
-                    expand=1
-                ),
-                ft.Container(width=16), 
-                ft.Container(
-                    content=group_display,
-                    expand=1
-                )
-            ]),
-            ft.Row([
-                ft.Container(
-                    content=self.payment_field,
                     expand=1
                 ),
                 ft.Container(width=16), 
@@ -195,6 +273,19 @@ class StudentEditView:
                     expand=1
                 )
             ]),
+            # שורה שלישית: סטטוס תשלום וקבוצה
+            ft.Row([
+                ft.Container(
+                    content=payment_status_display,
+                    expand=1
+                ),
+                ft.Container(width=16), 
+                ft.Container(
+                    content=group_display,
+                    expand=1
+                )
+            ]),
+            # שורה רביעית: צ'קבוקס אחות
             ft.Row([
                 ft.Container(
                     content=self.has_sister_checkbox,
@@ -202,6 +293,7 @@ class StudentEditView:
                 )
             ])
         ], spacing=20)
+
 
     def _create_modern_text_field(self, label, value, icon, hint, keyboard_type=None, suffix=None):
         """Create a modern text field component (React-like styling)"""
@@ -358,10 +450,10 @@ class StudentEditView:
         form_data = {
             "name": self.name_field.value.strip() if self.name_field.value else "",
             "phone": self.phone_field.value.strip() if self.phone_field.value else "",
-            "payment_status": self.payment_field.value.strip() if self.payment_field.value else "",
             "join_date": self.join_date_field.value.strip() if self.join_date_field.value else ""
         }
         
+        # הסרת payment_status מהוולידציה כי הוא לא ניתן לעריכה
         is_valid, empty_fields = ValidationUtils.validate_required_fields(form_data)
         if not is_valid:
             self._set_loading_state(False)
@@ -391,7 +483,7 @@ class StudentEditView:
             "name": form_data["name"],
             "phone": form_data["phone"],
             "groups": self.student.get('groups', []),
-            "payment_status": form_data["payment_status"],
+            "payment_status": self.student.get('payment_status', ''),  # שמירת הסטטוס המקורי
             "join_date": date_result,  
             "payments": self.student.get('payments', []),
             "has_sister": self.has_sister_checkbox.value
@@ -432,8 +524,7 @@ class StudentEditView:
 
     def _clear_field_errors(self):
         """Clear all field errors"""
-        fields = [self.name_field, self.phone_field, 
-                 self.payment_field, self.join_date_field]
+        fields = [self.name_field, self.phone_field, self.join_date_field]  # הסרת payment_field
         
         for field in fields:
             if field:
