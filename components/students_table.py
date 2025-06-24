@@ -186,7 +186,7 @@ class StudentsTable:
             return ft.Colors.GREEN_600, ft.Colors.with_opacity(0.1, ft.Colors.GREEN_600), ft.Icons.CHECK_CIRCLE, "שולם"
         elif payment_status == "חוב":
             if student_id:
-                total_owed_until_now = self.payment_calculator.get_student_payment_amount_until_now(student_id, join_date)
+                total_owed_until_now = self.payment_calculator.get_student_payment_amount_until_now(student_id)
                 
                 latest_end_date = ""
                 for group_name in student_groups:
@@ -197,21 +197,42 @@ class StudentsTable:
                         if group_end_date > latest_end_date:
                             latest_end_date = group_end_date
                 
-                all_course_payment = self.payment_calculator.get_student_payment_amount_for_period(student_id, join_date, latest_end_date)
+                if latest_end_date:
+                    first_group_name = student_groups[0] if student_groups else None
+                    if first_group_name:
+                        first_group_id = self.payment_calculator.get_group_id_by_name(first_group_name)
+                        if first_group_id:
+                            actual_join_date = self.payment_calculator.get_student_join_date_for_group(student_id, first_group_id)
+                            if actual_join_date:
+                                all_course_payment = self.payment_calculator.get_student_payment_amount_for_period(
+                                    student_id, first_group_id, actual_join_date, latest_end_date
+                                )
+                            else:
+                                all_course_payment = 0
+                        else:
+                            all_course_payment = 0
+                    else:
+                        all_course_payment = 0
+                else:
+                    all_course_payment = 0
             else:
                 total_owed_until_now = 0
                 all_course_payment = 0
                 for group_name in student_groups:
                     group_id = self.payment_calculator.get_group_id_by_name(group_name)
                     if group_id:
-                        group_payment = self.payment_calculator.get_payment_amount_until_now(group_id, join_date)
-                        group = self.payment_calculator.get_group_by_id(group_id)
-                        group_end_date = group.get("group_end_date", "") if group else ""
-                        group_course_payment = self.payment_calculator.get_payment_amount_for_period(group_id, join_date, group_end_date)
-                        total_owed_until_now += group_payment
-                        all_course_payment += group_course_payment
+                        actual_join_date = self.payment_calculator.get_student_join_date_for_group(student_id, group_id) if student_id else join_date
+                        if actual_join_date:
+                            group_payment = self.payment_calculator.get_payment_amount_until_now(group_id, actual_join_date)
+                            group = self.payment_calculator.get_group_by_id(group_id)
+                            group_end_date = group.get("group_end_date", "") if group else ""
+                            if group_end_date:
+                                group_course_payment = self.payment_calculator.get_payment_amount_for_period(group_id, actual_join_date, group_end_date)
+                            else:
+                                group_course_payment = 0
+                            total_owed_until_now += group_payment
+                            all_course_payment += group_course_payment
             
-            print(f"DEBUG: Payment for the entire course: {all_course_payment}, Amount to be paid so far: {total_owed_until_now}, Paid so far: {amount}")
             
             if amount >= total_owed_until_now:
                 return ft.Colors.ORANGE_600, ft.Colors.with_opacity(0.1, ft.Colors.ORANGE_600), ft.Icons.PENDING, "שולם עד כה"
@@ -219,6 +240,7 @@ class StudentsTable:
                 return ft.Colors.RED_600, ft.Colors.with_opacity(0.1, ft.Colors.RED_600), ft.Icons.ERROR, "חוב"
         else:
             return ft.Colors.GREY_600, ft.Colors.with_opacity(0.1, ft.Colors.GREY_600), ft.Icons.HELP, payment_status
+
 
     def update(self, students: List[Dict[str, Any]]):
         """Update table with students data"""

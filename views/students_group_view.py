@@ -127,8 +127,7 @@ class StudentsGroupView:
 
     def _get_payment_display_status(self, student):
         """Get payment status for display with 'paid until now' logic"""
-        from utils.payment_utils import PaymentCalculator
-        
+        from utils.payment_utils import PaymentCalculator        
         payment_status = student.get('payment_status', '')
         
         if payment_status == "שולם":
@@ -151,24 +150,20 @@ class StudentsGroupView:
                 except (ValueError, AttributeError):
                     continue
             
-            join_date = student.get('join_date', '')
             student_id = student.get('id', '')
             
-            # שימוש בפונקציה החדשה לחישוב התשלום הנדרש עד כה
             if student_id:
-                total_owed_until_now = payment_calculator.get_student_payment_amount_until_now(student_id, join_date)
+                total_owed_until_now = payment_calculator.get_student_payment_amount_until_now(student_id)
             else:
-                # fallback לשיטה הישנה אם אין student_id
                 student_groups = student.get('groups', [])
                 total_owed_until_now = 0
                 for group_name in student_groups:
                     group_id = payment_calculator.get_group_id_by_name(group_name)
                     if group_id:
-                        group_payment = payment_calculator.get_payment_amount_until_now(group_id, join_date)
-                        total_owed_until_now += group_payment
-            
-            print("total_paid", total_paid)
-            print("total_owed_until_now", total_owed_until_now)
+                        join_date = payment_calculator.get_student_join_date_for_group(student_id, group_id)
+                        if join_date:
+                            group_payment = payment_calculator.get_payment_amount_until_now(group_id, join_date)
+                            total_owed_until_now += group_payment
             
             if total_paid >= total_owed_until_now:
                 return "שולם עד כה"
@@ -178,12 +173,11 @@ class StudentsGroupView:
             return payment_status
 
 
+
     def _create_student_card(self, student):
         """Create a student card"""
-        # Check if student is in multiple groups
         is_multi_group = self._is_student_in_multiple_groups(student['id'])
         
-        # Avatar
         avatar = ft.Container(
             content=ft.Text(
                 student['name'][0] if student['name'] else "?",
@@ -199,7 +193,6 @@ class StudentsGroupView:
             alignment=ft.alignment.center,
         )
         
-        # Payment status - השתמש בפונקציה החדשה
         display_payment_status = self._get_payment_display_status(student)
         status_color = self._get_payment_status_color(display_payment_status)
         
@@ -210,7 +203,6 @@ class StudentsGroupView:
             border_radius=4
         )
         
-        # Student name with star if in multiple groups
         name_controls = [
             ft.Text(
                 student['name'],
@@ -243,7 +235,7 @@ class StudentsGroupView:
                     ft.Row([
                         status_dot,
                         ft.Text(
-                            display_payment_status,  # השתמש בסטטוס המעודכן
+                            display_payment_status, 
                             size=12,
                             color=ft.Colors.GREY_600,
                             overflow=ft.TextOverflow.ELLIPSIS

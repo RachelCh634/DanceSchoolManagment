@@ -124,7 +124,6 @@ class StudentEditView:
             except (ValueError, AttributeError):
                 continue
         
-        print(f"DEBUG: Student {student_id}, Payment status: {payment_status}, Amount paid: {amount_paid}")
         
         if payment_status == "שולם":
             return "שולם", ft.Colors.GREEN_600
@@ -134,16 +133,16 @@ class StudentEditView:
             if payment_calculator:
                 try:
                     if student_id:
-                        total_owed_until_now = payment_calculator.get_student_payment_amount_until_now(student_id, join_date)
-                        print(f"DEBUG: Total owed until now for student {student_id}: {total_owed_until_now}")
+                        total_owed_until_now = payment_calculator.get_student_payment_amount_until_now(student_id)
                     else:
                         total_owed_until_now = 0
                         for group_name in student_groups:
                             group_id = payment_calculator.get_group_id_by_name(group_name)
                             if group_id:
-                                group_payment = payment_calculator.get_payment_amount_until_now(group_id, join_date)
-                                total_owed_until_now += group_payment
-                        print(f"DEBUG: Total owed until now (old method): {total_owed_until_now}")
+                                actual_join_date = payment_calculator.get_student_join_date_for_group(student_id, group_id)
+                                if actual_join_date:
+                                    group_payment = payment_calculator.get_payment_amount_until_now(group_id, actual_join_date)
+                                    total_owed_until_now += group_payment
                     
                     if isinstance(total_owed_until_now, str):
                         total_owed_until_now = float(total_owed_until_now) if total_owed_until_now.strip() else 0
