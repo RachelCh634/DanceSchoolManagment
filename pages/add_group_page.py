@@ -1,17 +1,32 @@
+import json
+import re
 import flet as ft
+from datetime import datetime
 from utils.groups_data_manager import GroupsDataManager
 from utils.add_group_validator import AddGroupValidator
 from components.add_group_components import AddGroupComponents
+from utils.manage_json import ManageJSON  
+
 
 class AddGroupPage:
+    
     def __init__(self, page, navigation_callback, groups_page):
         self.page = page
         self.navigation_callback = navigation_callback
         self.groups_page = groups_page
         self.data_manager = GroupsDataManager()
+        data_dir = ManageJSON.get_appdata_path() / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        self.pricing_config_file = data_dir / "pricing.json"
+        if self.pricing_config_file.exists():
+            with open(self.pricing_config_file, "r", encoding="utf-8") as f:
+                config = json.load(f)
+                self.base_price = config.get("single", 180)
+        else:
+            self.base_price = 180
 
         self.form_state = {
-            'name': '', 'location': '', 'price': '', 'age': '',
+            'name': '', 'location': '', 'price': str(self.base_price), 'age': '',
             'teacher': '', 'start_date': '', 'end_date': '', 'day_of_week': '',
             'phone': '', 'email': '',
         }
@@ -26,6 +41,14 @@ class AddGroupPage:
         self.form_fields = self._create_form_fields()
         self.main_layout = self._render()
 
+    def _create_price_field(self):
+        price_field = AddGroupComponents.create_text_field(
+            "מחיר לחודש *", f"{self.base_price} ₪", ft.Icons.PAYMENTS_OUTLINED, 'price'
+        )
+        price_field.value = str(self.base_price)  
+        price_field.disabled = True               
+        return price_field
+    
     def _create_form_fields(self):
         """Create form fields"""
         return {
@@ -37,11 +60,7 @@ class AddGroupPage:
                 "מיקום *", "מיקום הקבוצה", ft.Icons.LOCATION_ON_OUTLINED,
                 'location', required=True, on_change=self._handle_field_change, on_blur=self._validate_field
             ),
-            'price': AddGroupComponents.create_text_field(
-                "מחיר לחודש *", "מחיר לחודש", ft.Icons.PAYMENTS_OUTLINED,
-                'price', suffix="₪", keyboard_type=ft.KeyboardType.NUMBER, required=True,
-                on_change=self._handle_field_change, on_blur=self._validate_field
-            ),
+            'price': self._create_price_field(),
             'age': AddGroupComponents.create_text_field(
                 "קבוצת גיל *", "טווח גילאים (לדוג' 6-8)", ft.Icons.GROUPS_OUTLINED,
                 'age', required=True, on_change=self._handle_field_change, on_blur=self._validate_field
@@ -79,21 +98,53 @@ class AddGroupPage:
             del self.validation_errors[key]
             self._update_field_style(key)
 
+
     def _validate_field(self, key, value):
-        """Validate individual field"""
-        error = AddGroupValidator.validate_field(key, value, self.required_fields)
-        
-        if key == 'name' and not error and value and value.strip():
-            if self._check_group_name_exists(value.strip()):
-                error = "קבוצה בשם זה כבר קיימת במערכת"
-        
+        """Validate individual field with detailed date errors"""
+        error = None
+
+        if key == 'name':
+            error = AddGroupValidator.validate_field(key, value, self.required_fields)
+            if not error and value and value.strip():
+                if self._check_group_name_exists(value.strip()):
+                    error = "קבוצה בשם זה כבר קיימת במערכת"
+
+        elif key in ('start_date', 'end_date'):
+            val = (value or "").strip()
+            if not val:
+                error = "שדה חובה"
+            else:
+                try:
+                    datetime.strptime(val, "%d/%m/%Y")
+                except ValueError:
+                    date_pattern = r'^\d{2}/\d{2}/\d{4}$'
+                    if not re.match(date_pattern, val):
+                        error = "פורמט תאריך לא תקין — השתמש/י ב־dd/mm/yyyy"
+                    else:
+                        error = "תאריך לא קיים (בדוק יום/חודש/שנה)"
+
+            if key == "end_date" and not error:
+                start = self.form_state.get("start_date", "").strip()
+                if start:
+                    try:
+                        start_dt = datetime.strptime(start, "%d/%m/%Y")
+                        end_dt = datetime.strptime(val, "%d/%m/%Y")
+                        if end_dt < start_dt:
+                            error = "תאריך סיום חייב להיות אחרי תאריך התחלה"
+                    except ValueError:
+                        pass  
+
+        else:
+            error = AddGroupValidator.validate_field(key, value, self.required_fields)
+
         if error:
             self.validation_errors[key] = error
         elif key in self.validation_errors:
             del self.validation_errors[key]
-        
+
         self._update_field_style(key)
         return error is None
+
 
     def _check_group_name_exists(self, group_name):
         """Check if group name already exists"""
@@ -302,11 +353,9 @@ class AddGroupPage:
 
     def _handle_save(self, e):
         """Handle save button click"""
-        # עדכן form_state
         for key, field in self.form_fields.items():
             self.form_state[key] = field.value or ""
         
-        # בדיקה נוספת לשם קבוצה לפני הוולידציה הכללית
         group_name = self.form_state['name'].strip()
         if group_name and self._check_group_name_exists(group_name):
             self.validation_errors['name'] = "קבוצה בשם זה כבר קיימת במערכת"
@@ -314,17 +363,11 @@ class AddGroupPage:
             AddGroupComponents.show_error_dialog(self.page, "קבוצה בשם זה כבר קיימת במערכת")
             return
         
-        # ולידציה
         if not self._validate_all_fields():
-            AddGroupComponents.show_error_dialog(self.page, "יש לתקן את השגיאות בטופס")
+            AddGroupComponents.show_error_dialog(self.page, "ישנם ערכים חסרים או שגויים. בדוק את הטופס ותקן בהתאם")
             return
         
-        # הכן נתונים
-        price_value = self.form_state['price'].strip()
-        try:
-            price_int = int(price_value) if price_value and price_value.isdigit() else 0
-        except (ValueError, TypeError):
-            price_int = 0
+        price_int = self.base_price
         
         group_data = {
             "name": self.form_state['name'].strip(),
@@ -339,13 +382,11 @@ class AddGroupPage:
             "teacher_email": self.form_state['email'].strip(),
         }
         
-        # ולידציה עם data manager
         is_valid, error_message = self.data_manager.validate_group_data(group_data)
         if not is_valid:
             AddGroupComponents.show_error_dialog(self.page, f"שגיאה בוולידציה: {error_message}")
             return
         
-        # שמירה
         success, message = self.data_manager.save_group(group_data)
         
         if success:
@@ -386,7 +427,6 @@ class AddGroupPage:
     def get_view(self):
         return self.main_layout
 
-    # Legacy methods for compatibility
     def save_group(self, e):
         self._handle_save(e)
 

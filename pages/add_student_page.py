@@ -5,7 +5,9 @@ from components.modern_dialog import ModernDialog
 from components.form_fields import FormFields
 from views.add_student_view import AddStudentView
 from utils.students_data_manager import StudentsDataManager
-
+from utils.manage_json import ManageJSON
+import re
+from datetime import datetime
 
 class AddStudentPage:
     def __init__(self, page, navigation_callback, group_name):
@@ -13,15 +15,15 @@ class AddStudentPage:
         self.navigation_callback = navigation_callback
         self.group_name = group_name
 
-        # Managers and helpers
         self.dialog = ModernDialog(page)
         self.data_manager = StudentsDataManager()
         self.view = AddStudentView(self)
         
-        # JSON files paths
-        self.joining_dates_file = "data/joining_dates.json"
+        base_dir = ManageJSON.get_appdata_path()
+        data_dir = base_dir / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        self.joining_dates_file = data_dir / "joining_dates.json"
 
-        # Main layout
         self.layout = ft.Column(
             spacing=24,
             scroll=ft.ScrollMode.AUTO,
@@ -29,10 +31,9 @@ class AddStudentPage:
             animate_opacity=300,
         )
 
-        # Form fields
         self.create_form_fields()
         self.show_add_student_form()
-
+    
     def get_view(self):
         return ft.Container(
             content=self.layout,
@@ -78,7 +79,6 @@ class AddStudentPage:
         """Load groups and populate dropdown"""
         groups_data = self.data_manager.load_groups()
         
-        # בדיקה אם groups_data הוא רשימה או מילון
         if isinstance(groups_data, dict):
             groups = groups_data.get("groups", [])
         elif isinstance(groups_data, list):
@@ -117,7 +117,7 @@ class AddStudentPage:
                         group_id = group_name.replace(" ", "_").replace("-", "_")
                     return group_id
             
-            print(f"Group '{group_name}' not found")  # Debug
+            print(f"Group '{group_name}' not found") 
             return None
             
         except Exception as e:
@@ -204,7 +204,6 @@ class AddStudentPage:
             self.dialog.show_error(f"תלמידה עם ת.ז. {form_data['id']} כבר קיימת במערכת")
             return
 
-        # קבלת ID של הקבוצה
         group_id = self.get_group_id_by_name(form_data["group"])
         
         if not group_id:
@@ -245,6 +244,7 @@ class AddStudentPage:
             "payments": []
         }
 
+
     def validate_form(self, form_data):
         """Validate form data"""
         required_fields = ["id", "name", "phone", "group", "payment_status", "join_date"]
@@ -252,11 +252,26 @@ class AddStudentPage:
             self.dialog.show_error("יש למלא את כל השדות הנדרשים")
             return False
 
+        # תעודת זהות
         if not form_data["id"].isdigit() or len(form_data["id"]) != 9:
             self.dialog.show_error("מספר תעודת זהות חייב להכיל 9 ספרות בלבד")
             return False
 
+        # תאריך הצטרפות
+        join_date = form_data["join_date"].strip()
+        try:
+            datetime.strptime(join_date, "%d/%m/%Y")
+        except ValueError:
+            # נבדוק אם בכלל הפורמט לא נכון
+            date_pattern = r'^\d{2}/\d{2}/\d{4}$'
+            if not re.match(date_pattern, join_date):
+                self.dialog.show_error("פורמט תאריך הצטרפות לא תקין — השתמשי ב־dd/mm/yyyy")
+            else:
+                self.dialog.show_error("תאריך הצטרפות לא קיים (בדקי יום/חודש/שנה)")
+            return False
+
         return True
+
 
     def go_back(self, e=None):
         """Navigate back to students page"""

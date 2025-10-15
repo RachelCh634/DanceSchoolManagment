@@ -1,15 +1,26 @@
 import flet as ft
 import os
-import asyncio
 from typing import Optional
-import math
+import os
+import json
 from pages.choose_group_attendance_page import AttendancePage
 from pages.groups_page import GroupsPage  
 from pages.students_list import StudentsListPage
-from pages.students_page import StudentsPage
 from pages.payment_page import PaymentPage
-from pages.group_attendance_page import GroupAttendancePage
 from utils.dashboard_data import get_all_dashboard_data
+
+def ensure_pricing_file():
+    base_dir = os.path.join(os.environ["LOCALAPPDATA"], "DanceSchool", "data")
+    os.makedirs(base_dir, exist_ok=True)
+
+    pricing_file = os.path.join(base_dir, "pricing.json")
+
+    if not os.path.exists(pricing_file):
+        default_data = {"single": 180, "two": 280, "three": 360, "sister": 20}
+        with open(pricing_file, "w", encoding="utf-8") as f:
+            json.dump(default_data, f, indent=4)
+
+    return pricing_file
 
 def format_currency(amount):
     return f"₪{amount:,}"
@@ -107,8 +118,9 @@ class MainApp:
         attendance_btn = self.create_sidebar_button("נוכחות", ft.Icons.CHECK_CIRCLE, 2, self.current_page_index == 2)
         payment_btn = self.create_sidebar_button("תשלומים", ft.Icons.CREDIT_CARD, 3, self.current_page_index == 3)
         students_btn = self.create_sidebar_button("רשימת התלמידות", ft.Icons.LIST, 4, self.current_page_index == 4)
+        settings_btn = self.create_sidebar_button("תמחור", ft.Icons.ATTACH_MONEY, 5, self.current_page_index == 5)
 
-        self.sidebar_buttons = [home_btn, groups_btn, attendance_btn, payment_btn, students_btn]
+        self.sidebar_buttons = [home_btn, groups_btn, attendance_btn, payment_btn, students_btn, settings_btn]
 
         def toggle_dark_mode(e):
             self.toggle_dark_mode(e.control.value)
@@ -136,6 +148,7 @@ class MainApp:
                     attendance_btn,
                     payment_btn,
                     students_btn,
+                    settings_btn,
                 ], spacing=5),
                 padding=ft.padding.symmetric(horizontal=10, vertical=20),
             ),
@@ -179,6 +192,10 @@ class MainApp:
         elif page_index == 4:
             students_page = StudentsListPage(self.page, self.handle_navigation)
             self.content_area.content = students_page.get_view()
+        elif page_index == 5:
+            from pages.pricing_settings_page import PricingSettingsPage
+            pricing_page = PricingSettingsPage(self.page, self.handle_navigation)
+            self.content_area.content = pricing_page.get_view()
         self.page.update()
 
     def handle_navigation(self, page_instance, page_index=None):
@@ -461,8 +478,9 @@ class MainApp:
         self.page.update()
 
 def main(page: ft.Page):
+    pricing_file = ensure_pricing_file() 
+    print("Pricing file ready at:", pricing_file)
     app = MainApp(page)
-
 
 if __name__ == '__main__':
     ft.app(target=main)

@@ -1,14 +1,17 @@
 import json
-import os
 from typing import List, Dict, Any
-
+from utils.manage_json import ManageJSON
 
 class StudentsDataManager:
     """Manager for students data operations"""
     
     def __init__(self):
-        self.students_file = "data/students.json"
-        self.groups_file = "data/groups.json"
+        data_dir = ManageJSON.get_appdata_path() / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        
+        self.students_file = data_dir / "students.json"
+        self.groups_file = data_dir / "groups.json"
+
 
     def load_students(self):
         """Load students from JSON file"""
@@ -55,9 +58,13 @@ class StudentsDataManager:
             return []
 
     def get_students_by_group(self, group_name):
-        """Get students filtered by group"""
         students = self.get_all_students()
-        return [s for s in students if group_name in s.get("groups", [])]
+        result = []
+        for s in students:
+            if group_name in s.get("groups", []):
+                self.recalc_payment_status(s)
+                result.append(s)
+        return result
 
     def save_students(self, students):
         """Save students to file"""
@@ -163,9 +170,10 @@ class StudentsDataManager:
                 print(f"Group '{group_name}' not found")
                 return False
             
-            attendance_file = f"attendances/attendance_{group_id}.json"
+            attendances_dir = ManageJSON.get_appdata_path() / "attendances"
+            attendance_file = attendances_dir / f"attendance_{group_id}.json"
             
-            if not os.path.exists(attendance_file):
+            if not attendance_file.exists():
                 print(f"Attendance file {attendance_file} not found")
                 return True  
             
@@ -254,39 +262,30 @@ class StudentsDataManager:
                 
                 total_paid = sum(
                     float(p['amount']) for p in student['payments']
-                    if p['amount'].replace('.', '', 1).isdigit()
+                    if isinstance(p.get('amount'), (int, float)) or 
+                    (isinstance(p.get('amount'), str) and p['amount'].replace('.', '', 1).isdigit())
                 )
-                
-                student_groups = student.get("groups", [])
-                join_date = student.get("join_date", "")
-                
-                total_owed = 0
-                for group_name in student_groups:
-                    groups = payment_calculator.load_groups()
-                    group = next((g for g in groups if g['name'] == group_name), None)
-                    
-                    if group:
-                        group_id = group.get("id")
-                        group_end_date = group.get("group_end_date", "")
-                        
-                        if group_id and group_end_date:
-                            group_payment = payment_calculator.get_payment_amount_for_period(
-                                group_id, join_date, group_end_date
-                            )
-                            total_owed += group_payment
-                
+
+                calc_result = payment_calculator.calculate_student_payment_until_now(student_id)
+                if calc_result.get("success"):
+                    total_owed = calc_result["total_payment"]
+                else:
+                    total_owed = 0
+
                 if total_owed > 0:
-                    if total_paid >= total_owed:
+                    if total_paid == total_owed:
                         student['payment_status'] = "שולם"
+                    elif total_paid > total_owed:
+                        student['payment_status'] = "שילם יותר (זיכוי)"
+                    elif total_paid > 0:
+                        student['payment_status'] = f"שולם עד כה"
                     else:
-                        student['payment_status'] = f"חוב"
+                        student['payment_status'] = f"חוב {total_owed}₪"
                 else:
                     student['payment_status'] = "לא נמצא מחיר קבוצות"
                 break
         
         return self.save_students(students)
-
-
 
     def _get_groups(self):
         """Get groups data for pricing"""
@@ -305,7 +304,6 @@ class StudentsDataManager:
             
             for student in students:
                 if "group" in student and "groups" not in student:
-                    # Convert old format to new format
                     old_group = student["group"]
                     student["groups"] = [old_group] if old_group else []
                     del student["group"]
@@ -318,3 +316,40 @@ class StudentsDataManager:
         except Exception as e:
             print(f"Error in migrate_old_format: {e}")
             return False
+        
+    def recalc_payment_status(self, student):
+        """Recalculate and update payment status for a student"""
+        from .payment_utils import PaymentCalculator
+        
+        payment_calculator = PaymentCalculator()
+
+        total_paid = sum(
+            float(p['amount']) for p in student.get('payments', [])
+            if isinstance(p.get('amount'), (int, float)) or
+            (isinstance(p.get('amount'), str) and p['amount'].replace('.', '', 1).isdigit())
+        )
+
+        calc_result = payment_calculator.calculate_student_payment_until_now(student.get('id'))
+        if calc_result.get("success"):
+            total_owed = calc_result["total_payment"]
+            course_started = calc_result.get("course_started", True) 
+        else:
+            total_owed = 0
+            course_started = False
+
+        if total_owed > 0:
+            if total_paid == total_owed:
+                student['payment_status'] = "שולם במלואו"
+            elif total_paid > total_owed:
+                student['payment_status'] = "שילם יותר (זיכוי)"
+            elif total_paid > 0:
+                student['payment_status'] = "שולם עד כה"
+            else:
+                student['payment_status'] = f"חוב {total_owed}₪"
+        else:
+            if not course_started:
+                student['payment_status'] = "החוג לא התחיל"
+            else:
+                student['payment_status'] = "לא נמצא מחיר קבוצות"
+
+        return student

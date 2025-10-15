@@ -39,7 +39,7 @@ class GroupDetailsPage:
             return
         
     def back_to_home(self, page_instance=None, page_index=None):
-        """חזרה לעמוד הבית"""
+        """Return to home page"""
         self.navigation_callback(None, 0)
         
     def get_view(self):
@@ -56,7 +56,7 @@ class GroupDetailsPage:
     def create_header(self):
         """Create the page header"""
         def go_back(e):
-            self.navigation_callback(None, 0)  # חזרה לעמוד הבית
+            self.navigation_callback(None, 0) 
             
         return ft.Container(
             content=ft.Row([

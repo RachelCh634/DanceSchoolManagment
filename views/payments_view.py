@@ -1,10 +1,11 @@
 import flet as ft
+import json
+from utils.manage_json import ManageJSON  
 from components.modern_card import ModernCard
 from components.clean_button import CleanButton
 from components.modern_dialog import ModernDialog
 from utils.payment_utils import PaymentCalculator
-import os
-import json
+from utils.manage_json import ManageJSON  
 
 class PaymentsView:
     """View for managing student payments"""
@@ -17,26 +18,54 @@ class PaymentsView:
         self.dialog = ModernDialog(self.page)
         self.payment_calculator = PaymentCalculator()
         self.load_student_data()
+        data_dir = ManageJSON.get_appdata_path() / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        self.pricing_config_file = data_dir / "pricing.json"
+        self.load_pricing_config()
+
+    def load_pricing_config(self):
+        try:
+            if self.pricing_config_file.exists():
+                with open(self.pricing_config_file, "r", encoding="utf-8") as f:
+                    config = json.load(f)
+                    self.base_price = config.get("single", 180)
+                    self.price_two_groups = config.get("two", 280)
+                    self.price_three_plus = config.get("three", 360)
+                    self.sister_discount_amount = config.get("sister", 20)
+            else:
+                self.base_price = self.base_price
+                self.price_two_groups = 280
+                self.price_three_plus = 360
+                self.sister_discount_amount = 20
+        except Exception as e:
+            print(f"Error loading pricing config, using defaults: {e}")
+            self.base_price = self.base_price
+            self.price_two_groups = 280
+            self.price_three_plus = 360
+            self.sister_discount_amount = 20
 
     def load_student_data(self):
-            """Load fresh student data from file"""
-            try:
-                if os.path.exists("data/students.json"):
-                    with open("data/students.json", "r", encoding="utf-8") as f:
-                        students_data = json.load(f)
-                        
-                    for student in students_data.get("students", []):
-                        if student.get("id") == self.student_id:
-                            self.student = student
-                            break
+        """Load fresh student data from file"""
+        try:
+            data_dir = ManageJSON.get_appdata_path() / "data"
+            students_file = data_dir / "students.json"
+            
+            if students_file.exists():
+                with open(students_file, "r", encoding="utf-8") as f:
+                    students_data = json.load(f)
                     
-                    if not self.student:
-                        self.student = {"id": self.student_id, "name": "תלמיד לא נמצא", "payments": []}
-                else:
-                    self.student = {"id": self.student_id, "name": "קובץ לא נמצא", "payments": []}
-                    
-            except Exception as e:
-                self.student = {"id": self.student_id, "name": "שגיאה בטעינה", "payments": []}
+                for student in students_data.get("students", []):
+                    if student.get("id") == self.student_id:
+                        self.student = student
+                        break
+                
+                if not self.student:
+                    self.student = {"id": self.student_id, "name": "התלמידה לא נמצאה", "payments": []}
+            else:
+                self.student = {"id": self.student_id, "name": "קובץ לא נמצא", "payments": []}
+                
+        except Exception as e:
+            self.student = {"id": self.student_id, "name": "שגיאה בטעינה", "payments": []}
 
     def refresh_student_data(self):
         """Refresh student data from file"""
@@ -180,6 +209,14 @@ class PaymentsView:
                 last_period = periods[-1]
                 final_monthly_price = last_period.get("monthly_price", 0)
             
+            if num_groups == 1:
+                final_monthly_price = self.base_price
+            elif num_groups == 2:
+                final_monthly_price = self.price_two_groups
+            elif num_groups >= 3:
+                final_monthly_price = self.price_three_plus
+            if has_sister:
+                final_monthly_price -= self.sister_discount_amount
             lines = []
             
             if final_monthly_price > 0:
@@ -197,7 +234,7 @@ class PaymentsView:
             if balance > 0:
                 lines.append(f"יתרת חוב: {balance}₪")
             elif balance == 0:
-                lines.append("סטטוס: שולם במלואו")
+                lines.append("סטטוס תשלום עד סוף חודש זה: שולם ")
             else:
                 lines.append(f"יתרת זכות: {abs(balance)}₪")
             

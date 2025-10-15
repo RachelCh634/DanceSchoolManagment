@@ -1,18 +1,21 @@
 import json
-import os
 from datetime import datetime, timedelta
-
-from components.modern_card import ModernCard
+from utils.manage_json import ManageJSON  
 
 class PaymentCalculator:
     def __init__(self):
-        self.groups_file_path = "data/groups.json"
-        self.students_file_path = "data/students.json" 
-        self.joining_dates_file_path = "data/joining_dates.json" 
-    
+        data_dir = ManageJSON.get_appdata_path() / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        
+        self.groups_file_path = data_dir / "groups.json"
+        self.students_file_path = data_dir / "students.json"
+        self.joining_dates_file_path = data_dir / "joining_dates.json"
+        self.pricing_config_file = data_dir / "pricing.json"
+        self.load_pricing_config()
+
     def load_groups(self):
         try:
-            if os.path.exists(self.groups_file_path):
+            if self.groups_file_path.exists():
                 with open(self.groups_file_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     return data.get("groups", [])
@@ -23,7 +26,7 @@ class PaymentCalculator:
     
     def load_students(self):
         try:
-            if os.path.exists(self.students_file_path):
+            if self.students_file_path.exists():
                 with open(self.students_file_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     return data.get("students", {})
@@ -34,7 +37,7 @@ class PaymentCalculator:
 
     def load_dates(self):
         try:
-            if os.path.exists(self.joining_dates_file_path):
+            if self.joining_dates_file_path.exists():
                 with open(self.joining_dates_file_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     return data
@@ -42,6 +45,27 @@ class PaymentCalculator:
         except Exception as e:
             print(f"Error loading dates: {e}")
             return []
+        
+    def load_pricing_config(self):
+        try:
+            if self.pricing_config_file.exists():
+                with open(self.pricing_config_file, "r", encoding="utf-8") as f:
+                    config = json.load(f)
+                    self.base_price = config.get("single", 180)
+                    self.price_two_groups = config.get("two", 280)
+                    self.price_three_plus = config.get("three", 360)
+                    self.sister_discount_amount = config.get("sister", 20)
+            else:
+                self.base_price = self.base_price
+                self.price_two_groups = 280
+                self.price_three_plus = 360
+                self.sister_discount_amount = 20
+        except Exception as e:
+            print(f"Error loading pricing config, using defaults: {e}")
+            self.base_price = self.base_price
+            self.price_two_groups = 280
+            self.price_three_plus = 360
+            self.sister_discount_amount = 20
     
     def get_student_join_date_for_group(self, student_id, group_id):
         try:
@@ -64,7 +88,7 @@ class PaymentCalculator:
             return None
 
     def get_student_groups_with_join_dates(self, student_id):
-        """Get all groups for student with their join dates"""
+        """Get all groups for student with their join and end dates"""
         try:
             student = self.get_student_by_id(student_id)
             if not student:
@@ -75,20 +99,25 @@ class PaymentCalculator:
                 group_id = self.get_group_id_by_name(group_name)
                 if group_id:
                     join_date = self.get_student_join_date_for_group(student_id, group_id)
-                    if join_date:
+                    group = self.get_group_by_id(group_id)
+                    if join_date and group:
+                        group_start_date = group.get("group_start_date")
+                        end_date = group.get("group_end_date") 
                         groups_with_dates.append({
                             "group_name": group_name,
                             "group_id": group_id,
-                            "join_date": join_date
+                            "join_date": join_date,
+                            "end_date": end_date,
+                            "start_date": group_start_date, 
                         })
             
-            # Sort by join date
             groups_with_dates.sort(key=lambda x: datetime.strptime(x["join_date"], "%d/%m/%Y"))
             return groups_with_dates
             
         except Exception as e:
             print(f"Error getting student groups with join dates: {e}")
             return []
+
 
     def check_if_same_day_multiple_groups(self, groups_with_dates):
         """Check if student joined multiple groups on the same day"""
@@ -108,84 +137,174 @@ class PaymentCalculator:
         
         return False
 
-    
-    def create_discount_periods_for_student(self, student_id, end_date):
-        """Create discount periods for student based on group join dates"""
+
+    def create_discount_periods_for_student(self, student_id, end_date=None):
+        """Creates payment periods with cutoff when a group closes and considers start/end dates"""
         try:
             groups_with_dates = self.get_student_groups_with_join_dates(student_id)
             if not groups_with_dates:
                 return []
             
-            groups_with_dates.sort(key=lambda x: datetime.strptime(x["join_date"], "%d/%m/%Y"))
-            
-            periods = []
-            
-            if len(groups_with_dates) == 1:
-                group_info = groups_with_dates[0]
-                periods.append({
-                    "start_date": group_info["join_date"],
-                    "end_date": end_date.strftime("%d/%m/%Y"),
-                    "active_groups": [group_info],
-                    "discount_applies": False,
-                    "reason": "קבוצה יחידה"
-                })
-            else:
-                # Multiple groups - create periods based on discount rules
-                first_group = groups_with_dates[0]
-                
-                # Check if joined multiple groups on same day
-                same_day_multiple = self.check_if_same_day_multiple_groups(groups_with_dates)
-                
-                if same_day_multiple:
-                    # All groups from day 1 with discount
-                    periods.append({
-                        "start_date": first_group["join_date"],
-                        "end_date": end_date.strftime("%d/%m/%Y"),
-                        "active_groups": groups_with_dates,
-                        "discount_applies": True,
-                        "reason": "הצטרפות לכמה קבוצות באותו יום"
-                    })
-                else:
-                    # Different join dates - create separate periods
-                    second_group = groups_with_dates[1]
-                    second_group_date = datetime.strptime(second_group["join_date"], "%d/%m/%Y")
-                    end_of_second_group_month = self.get_end_of_month(second_group_date)
-                    
-                    # Period 1: First group only (until second group joins)
-                    period1_end = (second_group_date - timedelta(days=1)).strftime("%d/%m/%Y")
-                    periods.append({
-                        "start_date": first_group["join_date"],
-                        "end_date": period1_end,
-                        "active_groups": [first_group],
-                        "discount_applies": False,
-                        "reason": "קבוצה ראשונה לבד"
-                    })
-                    
-                    # Period 2: Second group's first month (ONLY the second group, not both!)
-                    periods.append({
-                        "start_date": second_group["join_date"],
-                        "end_date": end_of_second_group_month.strftime("%d/%m/%Y"),
-                        "active_groups": [second_group],  # Only the second group!
-                        "discount_applies": False,
-                        "reason": "חודש ראשון של קבוצה שנייה - רק הקבוצה השנייה"
-                    })
-                    
-                    # Period 3: All groups with discount (from start of next month)
-                    if end_of_second_group_month < end_date:
-                        discount_start_date = end_of_second_group_month + timedelta(days=1)
-                        periods.append({
-                            "start_date": discount_start_date.strftime("%d/%m/%Y"),
-                            "end_date": end_date.strftime("%d/%m/%Y"),
-                            "active_groups": groups_with_dates,
-                            "discount_applies": True,
-                            "reason": "מתחילת החודש שאחרי הצטרפות לקבוצה שנייה"
-                        })
-            return periods
-            
-        except Exception as e:
-            print(f"DEBUG: Error creating discount periods: {e}")
-            return []
+            all_end_dates = [
+                datetime.strptime(g["end_date"], "%d/%m/%Y")
+                for g in groups_with_dates if g.get("end_date")
+            ]
 
+            if all_end_dates:
+                max_end_date = max(all_end_dates)
+            else:
+                max_end_date = datetime.now()
+
+            if end_date is None:
+                end_date = max_end_date
+
+
+            groups_with_dates.sort(key=lambda x: datetime.strptime(x["join_date"], "%d/%m/%Y"))
+            periods = []
+
+            for i, group in enumerate(groups_with_dates):
+                join_date = datetime.strptime(group["join_date"], "%d/%m/%Y")
+
+                group_start_str = group.get("start_date")
+                if group_start_str:
+                    group_start = datetime.strptime(group_start_str, "%d/%m/%Y")
+                    if group_start > join_date:
+                        join_date = group_start
+
+                if join_date > datetime.now():
+                    continue
+
+                group_id = group["group_id"]
+                end_of_join_month = self.get_end_of_month(join_date)
+                meetings = self.count_meetings_in_date_range(group_id, join_date, end_of_join_month)
+
+                if meetings >= 3:
+                    start_of_month = join_date.replace(day=1)
+
+                    if periods:
+                        prev = periods[-1]
+                        prev["end_date"] = (start_of_month - timedelta(days=1)).strftime("%d/%m/%Y")
+
+                    active_groups = groups_with_dates[:i + 1]
+
+                    periods.append({
+                        "start_date": start_of_month.strftime("%d/%m/%Y"),
+                        "end_date": end_of_join_month.strftime("%d/%m/%Y"),
+                        "active_groups": active_groups,
+                        "discount_applies": len(active_groups) > 1,
+                        "reason": f"קבוצה {i+1} נכנסה ישר עם הנחה (3+ שיעורים בחודש ההצטרפות)"
+                    })
+
+                else:
+                    periods.append({
+                        "start_date": group["join_date"],
+                        "end_date": end_of_join_month.strftime("%d/%m/%Y"),
+                        "active_groups": [group],
+                        "discount_applies": False,
+                        "reason": f"קבוצה {i+1} לבד עד סוף חודש ההצטרפות (פחות מ-3 שיעורים)"
+                    })
+
+                if len(periods) >= 2:
+                    prev = periods[-2]
+                    prev["end_date"] = end_of_join_month.strftime("%d/%m/%Y")
+
+                next_month_start = end_of_join_month + timedelta(days=1)
+                while next_month_start <= end_date:
+                    active_groups = groups_with_dates[:i + 1]
+                    current_end = self.get_end_of_month(next_month_start).strftime("%d/%m/%Y")
+
+                    if periods and set(g["group_id"] for g in periods[-1]["active_groups"]) == set(g["group_id"] for g in active_groups):
+                        periods[-1]["end_date"] = current_end
+                    else:
+                        periods.append({
+                            "start_date": next_month_start.strftime("%d/%m/%Y"),
+                            "end_date": current_end,
+                            "active_groups": active_groups,
+                            "discount_applies": len(active_groups) > 1,
+                            "reason": f"קבוצה {i+1} ממשיכה לאיחוד"
+                        })
+
+                    next_month_start = self.get_end_of_month(next_month_start) + timedelta(days=1)
+
+            final_periods = []
+            for period in periods:
+                period_start = datetime.strptime(period["start_date"], "%d/%m/%Y")
+                period_end = datetime.strptime(period["end_date"], "%d/%m/%Y")
+                active_groups = period["active_groups"]
+
+                cut_dates = []
+                for g in active_groups:
+                    group_end_date_str = g.get("end_date")
+                    if group_end_date_str:
+                        group_end_date = datetime.strptime(group_end_date_str, "%d/%m/%Y")
+                        if period_start <= group_end_date < period_end:
+                            cut_dates.append((group_end_date, g["group_id"]))
+
+                if not cut_dates:
+                    final_periods.append(period)
+                else:
+                    cut_dates.sort(key=lambda x: x[0])
+                    current_start = period_start
+                    current_groups = active_groups[:]
+
+                    for cut_date, finished_group_id in cut_dates:
+                        final_periods.append({
+                            "start_date": current_start.strftime("%d/%m/%Y"),
+                            "end_date": cut_date.strftime("%d/%m/%Y"),
+                            "active_groups": current_groups[:],
+                            "discount_applies": len(current_groups) > 1,
+                            "reason": "עד סיום קבוצה"
+                        })
+
+                        current_start = cut_date + timedelta(days=1)
+                        current_groups = [g for g in current_groups if g["group_id"] != finished_group_id]
+
+                    if current_groups and current_start <= period_end:
+                        final_periods.append({
+                            "start_date": current_start.strftime("%d/%m/%Y"),
+                            "end_date": period_end.strftime("%d/%m/%Y"),
+                            "active_groups": current_groups,
+                            "discount_applies": len(current_groups) > 1,
+                            "reason": "המשך אחרי סיום קבוצה"
+                        })
+
+            cleaned_periods = []
+            for period in final_periods:
+                valid_groups = []
+                for g in period["active_groups"]:
+                    g_end = datetime.strptime(g["end_date"], "%d/%m/%Y") if g.get("end_date") else max_end_date
+                    if g_end >= datetime.strptime(period["end_date"], "%d/%m/%Y"):
+                        valid_groups.append(g)
+
+                if valid_groups:
+                    cleaned_periods.append({
+                        **period,
+                        "active_groups": valid_groups,
+                        "discount_applies": len(valid_groups) > 1
+                    })
+
+            cleaned_periods.sort(key=lambda x: datetime.strptime(x["start_date"], "%d/%m/%Y"))
+
+            unique_periods = []
+            for period in cleaned_periods:
+                existing = next((p for p in unique_periods if p["start_date"] == period["start_date"]), None)
+
+                if existing:
+                    existing_end = datetime.strptime(existing["end_date"], "%d/%m/%Y")
+                    current_end = datetime.strptime(period["end_date"], "%d/%m/%Y")
+
+                    if (current_end > existing_end or
+                        (current_end == existing_end and len(period["active_groups"]) > len(existing["active_groups"]))):
+                        unique_periods.remove(existing)
+                        unique_periods.append(period)
+                else:
+                    unique_periods.append(period)
+
+            return unique_periods
+
+        except Exception as e:
+            print(f"DEBUG: Error creating discount periods with end-date check: {e}")
+            return []
 
     def calculate_period_payment_with_discount_rules(self, student_id, period):
         """Calculate payment for a specific period with discount rules"""
@@ -201,27 +320,22 @@ class PaymentCalculator:
             discount_applies = period["discount_applies"]
             has_sister = student.get("has_sister", False)
             
-            # Calculate monthly price with discounts
-            base_price = 180
+            base_price = self.base_price
             if discount_applies and num_groups > 1:
                 monthly_price = self.calculate_multiple_groups_discount(base_price, num_groups)
             else:
                 monthly_price = base_price * num_groups
             
-            # Apply sister discount
             if has_sister:
                 monthly_price = self.calculate_sister_discount(monthly_price, has_sister)
             
-            # Calculate time-based payment
             total_months = self.calculate_months_between_dates(start_date, end_date)
             
             if total_months == 0:                
                 if num_groups == 1:
-                    # Single group - straightforward
                     group_id = active_groups[0]["group_id"]
                     meetings = self.count_meetings_in_date_range(group_id, start_date, end_date)
                 else:
-                    # Multiple groups - use the group with most meetings in this period
                     max_meetings = 0
                     for group_info in active_groups:
                         group_meetings = self.count_meetings_in_date_range(
@@ -250,17 +364,14 @@ class PaymentCalculator:
                     "total_payment": round(payment, 2)
                 }
             else:
-                # Multi-month period
                 end_of_first_month = self.get_end_of_month(start_date)
                 
-                # Count meetings in first month
                 if num_groups == 1:
                     group_id = active_groups[0]["group_id"]
                     first_month_meetings = self.count_meetings_in_date_range(
                         group_id, start_date, end_of_first_month
                     )
                 else:
-                    # Multiple groups - use the group with most meetings
                     max_meetings = 0
                     for group_info in active_groups:
                         group_meetings = self.count_meetings_in_date_range(
@@ -374,21 +485,24 @@ class PaymentCalculator:
     
     def calculate_multiple_groups_discount(self, base_price, num_groups):
         if num_groups == 1:
-            return base_price
+            return self.base_price
         elif num_groups == 2:
-            return 280
+            return self.price_two_groups
         elif num_groups >= 3:
-            return 380
+            return self.price_three_plus
         else:
-            return base_price
+            return self.base_price
     
     def calculate_sister_discount(self, price, has_sister):
         if has_sister:
-            return max(0, price - 20)  
+            return max(0, price - self.sister_discount_amount)
         return price
     
-    def calculate_monthly_price_with_discounts(self, student_id, base_price=180):
+    def calculate_monthly_price_with_discounts(self, student_id, base_price=None):
         try:
+            if base_price is None:
+                base_price = self.base_price
+
             student = self.get_student_by_id(student_id)
             if not student:
                 return {
@@ -574,8 +688,8 @@ class PaymentCalculator:
                 "error": f"Group with ID {group_id} not found"
             }
         
-        monthly_price = float(group.get("price", 180))  
-        
+        monthly_price = float(group.get("price", self.base_price))
+    
         return group, {"monthly_price": monthly_price}
     
     def _create_payment_result(self, student_or_group, monthly_price, total_months, first_month_meetings, 
@@ -966,6 +1080,7 @@ class PaymentCalculator:
                 "error": f"Error updating student sister status: {str(e)}"
             }
 
+
     def get_student_payment_explanation(self, student_id, group_id=None, start_date=None, end_date=None):
         try:
             student = self.get_student_by_id(student_id)
@@ -1023,7 +1138,7 @@ class PaymentCalculator:
                     if latest_end_date:
                         course_periods = self.create_discount_periods_for_student(
                             student_id, 
-                            datetime.strptime(latest_end_date, "%d/%m/%Y")
+                            # datetime.strptime(latest_end_date, "%d/%m/%Y")
                         )
                         
                         for period in course_periods:
@@ -1083,7 +1198,8 @@ class PaymentCalculator:
             period = explanation.get("calculation_period", "")
             student_id = explanation.get("student_id", "")
             periods = explanation.get("periods", [])
-            total_required = explanation.get("total_required", 0)
+            # total_required = explanation.get("total_required", 0)
+            total_required = self.get_student_payment_amount_until_now(student_id)
             total_course_payment = explanation.get("total_course_payment", 0)
             course_end_info = explanation.get("course_end_info", "")
             
@@ -1113,7 +1229,7 @@ class PaymentCalculator:
                 summary_lines.append(f"תקופה {i}: {start_date} - {end_date}")
                 summary_lines.append(f"  קבוצות: {', '.join(period_groups)} ({num_groups} קבוצות)")
                 
-                base_price = 180
+                base_price = self.base_price
                 base_total = base_price * num_groups
                 summary_lines.append(f"  מחיר בסיס: {base_total}₪ ({base_price}₪ × {num_groups})")
                 
@@ -1121,14 +1237,14 @@ class PaymentCalculator:
                     if discount_applies:
                         groups_discount = base_total - monthly_price
                         if has_sister:
-                            groups_discount -= 20  
+                            groups_discount -= self.sister_discount_amount
                         summary_lines.append(f"  הנחת קבוצות מרובות: -{groups_discount}₪")
                         summary_lines.append(f"  ההנחה חלה כי: {reason}")
                     else:
                         summary_lines.append(f"  ללא הנחת קבוצות - {reason}")
                 
                 if has_sister:
-                    summary_lines.append(f"  הנחת אחיות: -20₪")
+                    summary_lines.append(f"  הנחת אחיות: -{self.sister_discount_amount}₪")
                 
                 summary_lines.append(f"  מחיר חודשי סופי: {monthly_price}₪")
                 
@@ -1158,7 +1274,7 @@ class PaymentCalculator:
             ])
             
             if total_course_payment > 0:
-                summary_lines.append(f"סה\"כ לכל הקורס{course_end_info}: {total_course_payment}₪")
+                summary_lines.append(f"סה\"כ לכל הקורס: {total_course_payment}₪")
             
             summary_lines.extend([
                 "",
@@ -1170,7 +1286,7 @@ class PaymentCalculator:
             if balance > 0:
                 summary_lines.append(f"יתרת חוב עד כה: {balance}₪")
             elif balance == 0:
-                summary_lines.append("סטטוס עד כה: שולם במלואו ✓")
+                summary_lines.append("סטטוס עד כה: שולם")
                 
                 if total_course_payment > total_required:
                     remaining_for_course = total_course_payment - total_paid
@@ -1254,7 +1370,7 @@ class PaymentCalculator:
                     discount_status = "קבוצה אחת"
             else:
                 print("DEBUG: No periods found, using fallback calculation")
-                base_price = 180
+                base_price = self.base_price
                 current_monthly_price = base_price * num_groups
                 
                 if num_groups > 1:
@@ -1285,7 +1401,7 @@ class PaymentCalculator:
             if balance > 0:
                 lines.append(f"יתרת חוב: {balance}₪")
             elif balance == 0:
-                lines.append("סטטוס: שולם במלואו ✓")
+                lines.append("סטטוס: שולם במלואו ")
             else:
                 lines.append(f"שילם יתר: +{abs(balance)}₪")
             
@@ -1296,5 +1412,3 @@ class PaymentCalculator:
             import traceback
             traceback.print_exc()
             return "שגיאה בהצגת סיכום התשלום"
-
-    
