@@ -2,7 +2,7 @@
 
 A modern and elegant desktop application built in Python, designed to help dance school owners seamlessly manage their classes, students, and payments — all in one place.
 
-##3 🧭 Overview
+### 🧭 Overview
 
 **DanceSchoolManagement** was crafted with love and precision for a private client, offering a clean, organized, and highly functional interface for managing **Ballet** and **Hip-Hop** courses. Whether it’s registering new students, tracking payments, or launching promotional offers, everything is just a few clicks away.
 
