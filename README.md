@@ -18,8 +18,7 @@ A modern and elegant desktop application built in Python, designed to help dance
   Manage and monitor payments for each student — on time, organized, and clear.
 
 - **Special Offers & Promotions**  
-  - *Sister Discounts*  
-  - *1+1 Deals*  
+  - *Sister Discounts*   
   - Custom promotions tailored to your school's needs.
 
 -  **Smart Filters & Search**  
